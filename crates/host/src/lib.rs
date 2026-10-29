@@ -1,3 +1,4 @@
+pub mod desktop;
 pub mod local_ipc;
 pub mod watch;
 use agai_protocol::*;
@@ -152,7 +153,7 @@ impl HostService {
         }
     }
 }
-pub fn handle(service: &HostService, stream: &mut UnixStream) -> Result<()> {
+pub fn handle(service: &mut HostService, stream: &mut UnixStream) -> Result<()> {
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
         .map_err(io)?;
@@ -161,10 +162,16 @@ pub fn handle(service: &HostService, stream: &mut UnixStream) -> Result<()> {
         .map_err(io)?;
     let response = (|| {
         let bytes = local_ipc::read_frame(stream)?;
+        if let Ok(envelope) = serde_json::from_slice::<DesktopEnvelope>(&bytes) {
+            envelope.meta.validate(false)?;
+            return serde_json::to_value(service.desktop(&Principal::LocalUser, envelope.desktop)?)
+                .map_err(|_| AppError::new("INVALID_DATA"));
+        }
         let envelope: ReadEnvelope =
             serde_json::from_slice(&bytes).map_err(|_| AppError::new("INVALID_REQUEST"))?;
         envelope.meta.validate(false)?;
-        service.read(&Principal::LocalUser, envelope.request)
+        serde_json::to_value(service.read(&Principal::LocalUser, envelope.request)?)
+            .map_err(|_| AppError::new("INVALID_DATA"))
     })();
     let bytes = serde_json::to_vec(&response).map_err(|_| AppError::new("INVALID_DATA"))?;
     local_ipc::write_frame(stream, &bytes)
@@ -178,10 +185,10 @@ pub fn serve(profile: &Profile) -> Result<()> {
     fs::set_permissions(&socket, fs::Permissions::from_mode(0o600)).map_err(io)?;
     let store =
         Store::open(&profile.path.join("store.db")).map_err(|_| AppError::new("STORAGE_ERROR"))?;
-    let service = HostService { store };
+    let mut service = HostService { store };
     for stream in listener.incoming() {
         let mut stream = stream.map_err(io)?;
-        let _ = handle(&service, &mut stream);
+        let _ = handle(&mut service, &mut stream);
     }
     Ok(())
 }

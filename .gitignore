@@ -6,3 +6,7 @@ target/
 **/src-tauri/gen/
 **/src-tauri/icons/ios/
 **/src-tauri/icons/android/
+
+apps/client/src-tauri/binaries/
+**/test-results/
+**/playwright-report/

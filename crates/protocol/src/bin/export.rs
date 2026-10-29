@@ -28,6 +28,12 @@ fn main() {
         EventEnvelope,
         ReadRequest,
         ReadEnvelope,
-        ReadResponse
+        ReadResponse,
+        RepoScope,
+        Revision,
+        BranchRef,
+        DesktopRequest,
+        DesktopEnvelope,
+        DesktopResponse
     );
 }

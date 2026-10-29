@@ -1,3 +1,4 @@
 packages:
   - packages/*
+  - apps/*
 # The throwaway probe keeps an independent lockfile and dependencies.

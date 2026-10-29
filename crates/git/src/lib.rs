@@ -172,7 +172,7 @@ impl GitReader {
             "--topo-order",
             &format!("--skip={offset}"),
             &format!("-{}", limit + 1),
-            "--format=%H%x00%P%x00%s%x00",
+            "--format=%H%x00%P%x00%s%x00%an%x00%aI%x00",
             "--all",
             &head,
             "--",
@@ -199,7 +199,21 @@ impl GitReader {
                     .ok_or_else(|| AppError::new("INVALID_GIT_OUTPUT"))?,
             )
             .into_owned();
+            let author = String::from_utf8_lossy(
+                chunks
+                    .next()
+                    .ok_or_else(|| AppError::new("INVALID_GIT_OUTPUT"))?,
+            )
+            .into_owned();
+            let date = String::from_utf8_lossy(
+                chunks
+                    .next()
+                    .ok_or_else(|| AppError::new("INVALID_GIT_OUTPUT"))?,
+            )
+            .into_owned();
             commits.push(Commit {
+                author,
+                date,
                 oid,
                 parents,
                 subject,

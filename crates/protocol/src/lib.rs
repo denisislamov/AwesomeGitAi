@@ -235,6 +235,8 @@ pub struct RepoState {
 }
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 pub struct Commit {
+    pub author: String,
+    pub date: String,
     pub oid: String,
     pub parents: Vec<String>,
     pub subject: String,
@@ -330,5 +332,81 @@ pub enum ReadResponse {
     },
     Comparison {
         comparison: Comparison,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct RepoScope {
+    pub repo_id: Uuid,
+    pub worktree_id: Uuid,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub enum Revision {
+    Empty,
+    Head,
+    Index,
+    Worktree,
+    Commit { oid: String },
+    Snapshot { id: Uuid },
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct BranchRef {
+    pub name: String,
+    pub oid: String,
+    pub remote: bool,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum DesktopRequest {
+    OpenRepository {
+        path: String,
+    },
+    CommitDetails {
+        scope: RepoScope,
+        oid: String,
+    },
+    ListFiles {
+        scope: RepoScope,
+        revision: Option<String>,
+    },
+    CompareFile {
+        scope: RepoScope,
+        path: RepoPath,
+        base: Revision,
+        target: Revision,
+    },
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct DesktopEnvelope {
+    pub meta: RequestMeta,
+    pub desktop: DesktopRequest,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(tag = "kind")]
+pub enum DesktopResponse {
+    Repository {
+        state: RepoState,
+        branches: Vec<BranchRef>,
+        root: String,
+    },
+    Files {
+        paths: Vec<RepoPath>,
+    },
+    CommitDetails {
+        oid: String,
+        author: String,
+        date: String,
+        message: String,
+        paths: Vec<RepoPath>,
+        parents: Vec<String>,
+    },
+    FileComparison {
+        comparison: Comparison,
+        base: Snapshot,
+        target: Snapshot,
+        observed_generation: String,
     },
 }

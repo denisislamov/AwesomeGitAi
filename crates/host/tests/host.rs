@@ -28,7 +28,7 @@ fn profile_rejects_symlink() {
 #[test]
 fn remote_principal_cannot_use_local_read() {
     let d = tempfile::tempdir().unwrap();
-    let service = HostService {
+    let mut service = HostService {
         store: agai_storage::Store::open(&d.path().join("db")).unwrap(),
     };
     assert_eq!(
@@ -60,10 +60,10 @@ fn real_socket_enforces_version_and_response_framing() {
     let db = d.path().join("db");
     let (mut client, mut server) = UnixStream::pair().unwrap();
     let worker = std::thread::spawn(move || {
-        let service = HostService {
+        let mut service = HostService {
             store: agai_storage::Store::open(&db).unwrap(),
         };
-        agai_host::handle(&service, &mut server).unwrap();
+        agai_host::handle(&mut service, &mut server).unwrap();
     });
     let request = ReadEnvelope {
         meta: RequestMeta {

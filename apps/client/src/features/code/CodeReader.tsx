@@ -1,0 +1,265 @@
+import React, { useEffect, useRef, useState } from "react";
+import { EditorState } from "@codemirror/state";
+import {
+  EditorView,
+  lineNumbers,
+  highlightActiveLineGutter,
+  keymap,
+} from "@codemirror/view";
+import {
+  syntaxHighlighting,
+  HighlightStyle,
+  foldGutter,
+  foldKeymap,
+} from "@codemirror/language";
+import { search, searchKeymap, openSearchPanel } from "@codemirror/search";
+import { defaultKeymap } from "@codemirror/commands";
+import { MergeView, unifiedMergeView } from "@codemirror/merge";
+import { javascript } from "@codemirror/lang-javascript";
+import { python } from "@codemirror/lang-python";
+import { csharp } from "@replit/codemirror-lang-csharp";
+import { tags } from "@lezer/highlight";
+import type { CodeTab, Workspace } from "../../workspace";
+const syntax = HighlightStyle.define([
+  { tag: tags.keyword, color: "#fe8019" },
+  { tag: tags.typeName, color: "#fabd2f" },
+  { tag: [tags.string, tags.function(tags.variableName)], color: "#b8bb26" },
+  { tag: tags.propertyName, color: "#8ec07c" },
+  { tag: tags.variableName, color: "#83a598" },
+  { tag: [tags.number, tags.bool, tags.null], color: "#d3869b" },
+  { tag: tags.comment, color: "#a89984" },
+]);
+const lightSyntax = HighlightStyle.define([
+  { tag: tags.keyword, color: "#9d3000" },
+  { tag: tags.typeName, color: "#775400" },
+  { tag: [tags.string, tags.function(tags.variableName)], color: "#426000" },
+  { tag: tags.number, color: "#84407f" },
+  { tag: tags.comment, color: "#645c50" },
+]);
+export function CodeReader({
+  tab,
+  workspace,
+  view,
+  light,
+  ignoreWhitespace,
+  showDeleted,
+}: {
+  tab: CodeTab;
+  workspace: Workspace;
+  view: "unified" | "split";
+  light: boolean;
+  ignoreWhitespace: boolean;
+  showDeleted: boolean;
+}) {
+  const parent = useRef<HTMLDivElement>(null);
+  const editor = useRef<EditorView | null>(null);
+  const selected = useRef<{ side: "Old" | "New"; start: number; end: number }>({
+    side: "New",
+    start: 1,
+    end: 1,
+  });
+  const [line, setLine] = useState("1");
+  useEffect(() => {
+    if (!parent.current) return;
+    const a = tab.data.base.files[0],
+      b = tab.data.target.files[0];
+    const decode = (bytes: number[]) => {
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(
+        new Uint8Array(bytes),
+      );
+      return ignoreWhitespace ? text.replace(/[ \t]+$/gm, "") : text;
+    };
+    const lang = tab.path.display.endsWith(".cs")
+      ? csharp()
+      : tab.path.display.endsWith(".py")
+        ? python()
+        : /\.[cm]?[jt]sx?$/.test(tab.path.display)
+          ? javascript({ typescript: true, jsx: true })
+          : [];
+    const extension = (side: "Old" | "New") => [
+      EditorState.readOnly.of(true),
+      EditorView.editable.of(false),
+      EditorView.contentAttributes.of({
+        "aria-label":
+          side === "Old" ? "Старая версия кода" : "Новая версия кода",
+        tabindex: "0",
+      }),
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      foldGutter(),
+      lang,
+      search({ top: true }),
+      keymap.of([...searchKeymap, ...foldKeymap, ...defaultKeymap]),
+      syntaxHighlighting(light ? lightSyntax : syntax),
+      EditorView.theme(
+        {
+          "&": {
+            height: "100%",
+            backgroundColor: light ? "#fbf1c7" : "#1d2021",
+            color: light ? "#3c3836" : "#ebdbb2",
+            fontSize: "var(--code-size)",
+          },
+          ".cm-scroller": { fontFamily: "Monaco, monospace", overflow: "auto" },
+          ".cm-gutters": {
+            backgroundColor: light ? "#eee4bb" : "#242727",
+            color: light ? "#645c50" : "#bdae93",
+            border: "none",
+          },
+          ".cm-line": { padding: "0 12px" },
+          ".cm-content": { padding: "14px 0" },
+          ".cm-cursor": { borderLeftColor: "#fabd2f" },
+          ".cm-selectionBackground": {
+            backgroundColor: light
+              ? "#d5c4a1 !important"
+              : "#504945 !important",
+          },
+        },
+        { dark: !light },
+      ),
+      EditorView.updateListener.of((u) => {
+        if (u.selectionSet) {
+          const s = u.state.selection.main;
+          selected.current = {
+            side,
+            start: u.state.doc.lineAt(s.from).number,
+            end: u.state.doc.lineAt(s.to).number,
+          };
+        }
+      }),
+    ];
+    let cleanup: () => void;
+    let views: EditorView[];
+    if (view === "split") {
+      const merge = new MergeView({
+        a: { doc: decode(a.bytes), extensions: extension("Old") },
+        b: { doc: decode(b.bytes), extensions: extension("New") },
+        parent: parent.current,
+        highlightChanges: true,
+        gutter: true,
+      });
+      views = [merge.a, merge.b];
+      editor.current = b.state === "Absent" ? merge.a : merge.b;
+      cleanup = () => merge.destroy();
+    } else {
+      const removed = b.state === "Absent";
+      const v = new EditorView({
+        doc: decode(removed ? a.bytes : b.bytes),
+        extensions: [
+          ...extension(removed ? "Old" : "New"),
+          ...(removed
+            ? []
+            : [
+                unifiedMergeView({
+                  original: decode(a.bytes),
+                  gutter: true,
+                  highlightChanges: true,
+                  syntaxHighlightDeletions: true,
+                  mergeControls: false,
+                  allowInlineDiffs: false,
+                }),
+              ]),
+        ],
+        parent: parent.current,
+      });
+      views = [v];
+      editor.current = v;
+      cleanup = () => v.destroy();
+    }
+    selected.current = {
+      side: b.state === "Absent" ? "Old" : "New",
+      start: 1,
+      end: 1,
+    };
+    const restore = requestAnimationFrame(() =>
+      views.forEach((v) => {
+        v.scrollDOM.scrollTop = tab.scroll;
+        v.requestMeasure();
+      }),
+    );
+    const onscroll = () => {
+      if (editor.current)
+        workspace.setScroll(tab.id, editor.current.scrollDOM.scrollTop);
+    };
+    views.forEach((v) => v.scrollDOM.addEventListener("scroll", onscroll));
+    return () => {
+      cancelAnimationFrame(restore);
+      views.forEach((v) => v.scrollDOM.removeEventListener("scroll", onscroll));
+      cleanup();
+      editor.current = null;
+    };
+  }, [tab.data, view, light, ignoreWhitespace]);
+  const file = tab.data.target.files[0];
+  const old = tab.data.base.files[0];
+  if (file.state === "Conflicted" || old.state === "Conflicted")
+    return (
+      <div className="conflict">
+        <h3>Конфликт слияния</h3>
+        <p>Index содержит несколько версий. Разрешите конфликт в IDE.</p>
+        {[...old.stages, ...file.stages].map((s, i) => (
+          <details key={i}>
+            <summary>
+              Stage {s.stage} · {s.oid.slice(0, 8)}
+            </summary>
+            <pre>{new TextDecoder().decode(new Uint8Array(s.bytes))}</pre>
+          </details>
+        ))}
+      </div>
+    );
+  return (
+    <div className="reader">
+      <div className="reader-actions">
+        <span className="readonly">◉ Только чтение</span>
+        <button
+          onClick={() => editor.current && openSearchPanel(editor.current)}
+        >
+          Поиск в коде ⌘F
+        </button>
+        <label>
+          Строка{" "}
+          <input
+            aria-label="Перейти к строке"
+            type="number"
+            min="1"
+            value={line}
+            onChange={(e) => setLine(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && editor.current) {
+                const v = editor.current;
+                const n = Math.max(
+                  1,
+                  Math.min(v.state.doc.lines, Number(line) || 1),
+                );
+                v.dispatch({
+                  selection: { anchor: v.state.doc.line(n).from },
+                  effects: EditorView.scrollIntoView(v.state.doc.line(n).from, {
+                    y: "center",
+                  }),
+                });
+                v.focus();
+              }
+            }}
+          />
+        </label>
+        <button
+          className="explain-button"
+          onClick={() =>
+            workspace.explain(
+              selected.current.side,
+              selected.current.start,
+              selected.current.end,
+            )
+          }
+        >
+          Объяснить выделение
+        </button>
+      </div>
+      {file.state === "Absent" && (
+        <div className="deleted-label">Файл удалён</div>
+      )}
+      <div
+        className={"editor-mount " + (!showDeleted ? "hide-deleted" : "")}
+        ref={parent}
+      />
+    </div>
+  );
+}

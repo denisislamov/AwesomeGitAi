@@ -168,3 +168,17 @@ fn history_revalidates_refs_after_traversal() {
         .unwrap();
     assert!(status.success());
 }
+
+#[test]
+fn history_rows_include_author_and_iso_date() {
+    let d = repo();
+    let page = GitReader::new(d.path()).unwrap().history(None, 10).unwrap();
+    let json = serde_json::to_value(&page).unwrap();
+    assert_eq!(json["commits"][0]["author"], "Fixture");
+    assert!(
+        json["commits"][0]["date"]
+            .as_str()
+            .unwrap_or("")
+            .contains('T')
+    );
+}
