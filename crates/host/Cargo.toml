@@ -3,6 +3,9 @@ name = "agai-host"
 version = "0.1.0"
 edition = "2024"
 [dependencies]
+agai-git={path="../git"}
+agai-domain={path="../domain"}
+uuid={version="1",features=["v4"]}
 agai-protocol = {path="../protocol"}
 agai-storage = {path="../storage"}
 serde_json = "1"

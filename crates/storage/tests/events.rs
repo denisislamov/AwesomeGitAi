@@ -1,11 +1,167 @@
 mod common;
-use agai_storage::Store;use agai_protocol::*;
-#[test]fn atomic_snapshot_event_receipt_survives_restart(){let d=tempfile::tempdir().unwrap();let p=d.path().join("db");let(m,e,s)=common::input();let receipt={let mut db=Store::open(&p).unwrap();db.append_event(&m,&e,&[s.clone()]).unwrap()};let mut db=Store::open(&p).unwrap();assert_eq!(db.snapshot(s.id).unwrap(),s);assert_eq!(db.append_event(&m,&e,&[s]).unwrap(),receipt);assert_eq!(db.search(e.repo_id,"stamina").unwrap(),vec![receipt.event_id]);assert!(db.search(uuid::Uuid::new_v4(),"stamina").unwrap().is_empty());}
-#[test]fn same_key_changed_snapshot_rejected(){let d=tempfile::tempdir().unwrap();let mut db=Store::open(&d.path().join("db")).unwrap();let(m,e,s)=common::input();db.append_event(&m,&e,&[s.clone()]).unwrap();let mut changed=s;changed.generation="other".into();assert_eq!(db.append_event(&m,&e,&[changed]).unwrap_err().code,"IDEMPOTENCY_CONFLICT");}
-#[test]fn failed_snapshot_transaction_leaves_no_event(){let d=tempfile::tempdir().unwrap();let mut db=Store::open(&d.path().join("db")).unwrap();let(m,e,s)=common::input();let mut bad=s.clone();bad.files[0].sha256="invalid".into();assert!(db.append_event(&m,&e,&[bad]).is_err());assert!(db.snapshot(s.id).is_err());assert!(db.search(e.repo_id,"stamina").unwrap().is_empty());db.append_event(&m,&e,&[s]).unwrap();}
-#[test]fn fts_is_rebuildable(){let d=tempfile::tempdir().unwrap();let p=d.path().join("db");let mut db=Store::open(&p).unwrap();let(m,e,s)=common::input();let receipt=db.append_event(&m,&e,&[s]).unwrap();rusqlite::Connection::open(&p).unwrap().execute("DELETE FROM event_search",[]).unwrap();db.rebuild_index().unwrap();assert_eq!(db.search(e.repo_id,"stamina").unwrap(),vec![receipt.event_id]);}
-#[test]fn migration_preserves_legacy_entries_and_backup(){let d=tempfile::tempdir().unwrap();let p=d.path().join("db");{let c=rusqlite::Connection::open(&p).unwrap();c.execute_batch("CREATE TABLE entries(id TEXT PRIMARY KEY,request_key TEXT UNIQUE,payload TEXT,bytes BLOB); INSERT INTO entries VALUES('old','key','event',X'636F6465');PRAGMA user_version=1;").unwrap();}let db=Store::open(&p).unwrap();assert_eq!(db.read("old").unwrap(),b"code");assert!(p.with_extension("v1.bak").exists());}
-#[test]fn crash_worker(){if let Ok(p)=std::env::var("AGAI_TEST_CRASH_DB"){let mut db=Store::open(std::path::Path::new(&p)).unwrap();let input=std::fs::read_to_string(format!("{p}.json")).unwrap();let(m,e,s):(RequestMeta,EventInput,Snapshot)=serde_json::from_str(&input).unwrap();db.append_event(&m,&e,&[s]).unwrap();std::process::abort();}}
-#[test]fn crash_before_ack_recovers(){let d=tempfile::tempdir().unwrap();let p=d.path().join("db");let(m,e,s)=common::input();std::fs::write(format!("{}.json",p.display()),serde_json::to_vec(&(&m,&e,&s)).unwrap()).unwrap();let status=std::process::Command::new(std::env::current_exe().unwrap()).args(["--exact","crash_worker","--nocapture"]).env("AGAI_TEST_CRASH_DB",&p).status().unwrap();assert!(!status.success());let mut db=Store::open(&p).unwrap();assert_eq!(db.snapshot(s.id).unwrap(),s);let receipt=db.append_event(&m,&e,&[s]).unwrap();assert_eq!(db.search(e.repo_id,"stamina").unwrap(),vec![receipt.event_id]);}
-#[test]fn failure_after_snapshot_insert_rolls_back_everything(){let d=tempfile::tempdir().unwrap();let p=d.path().join("db");let mut db=Store::open(&p).unwrap();let(m,e,s)=common::input();let c=rusqlite::Connection::open(&p).unwrap();c.execute_batch("CREATE TRIGGER reject_event BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT,'test disk failure'); END;").unwrap();assert!(db.append_event(&m,&e,&[s.clone()]).is_err());assert!(db.snapshot(s.id).is_err());c.execute("DROP TRIGGER reject_event",[]).unwrap();db.append_event(&m,&e,&[s]).unwrap();}
-#[test]fn migration_failure_keeps_version_and_data(){let d=tempfile::tempdir().unwrap();let p=d.path().join("db");let c=rusqlite::Connection::open(&p).unwrap();c.execute_batch("CREATE TABLE entries(id TEXT PRIMARY KEY,request_key TEXT UNIQUE,payload TEXT,bytes BLOB);CREATE VIEW events AS SELECT 1;PRAGMA user_version=1;").unwrap();assert!(Store::open(&p).is_err());assert_eq!(c.query_row("PRAGMA user_version",[],|r|r.get::<_,u32>(0)).unwrap(),1);}
+use agai_protocol::*;
+use agai_storage::Store;
+#[test]
+fn atomic_snapshot_event_receipt_survives_restart() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    let (m, e, s) = common::input();
+    let receipt = {
+        let mut db = Store::open(&p).unwrap();
+        db.append_event(&m, &e, &[s.clone()]).unwrap()
+    };
+    let mut db = Store::open(&p).unwrap();
+    assert_eq!(db.snapshot(s.id).unwrap(), s);
+    assert_eq!(db.append_event(&m, &e, &[s]).unwrap(), receipt);
+    assert_eq!(
+        db.search(e.repo_id, "stamina").unwrap(),
+        vec![receipt.event_id]
+    );
+    assert!(
+        db.search(uuid::Uuid::new_v4(), "stamina")
+            .unwrap()
+            .is_empty()
+    );
+}
+#[test]
+fn same_key_changed_snapshot_rejected() {
+    let d = tempfile::tempdir().unwrap();
+    let mut db = Store::open(&d.path().join("db")).unwrap();
+    let (m, e, s) = common::input();
+    db.append_event(&m, &e, &[s.clone()]).unwrap();
+    let mut changed = s;
+    changed.generation = "other".into();
+    assert_eq!(
+        db.append_event(&m, &e, &[changed]).unwrap_err().code,
+        "IDEMPOTENCY_CONFLICT"
+    );
+}
+#[test]
+fn failed_snapshot_transaction_leaves_no_event() {
+    let d = tempfile::tempdir().unwrap();
+    let mut db = Store::open(&d.path().join("db")).unwrap();
+    let (m, e, s) = common::input();
+    let mut bad = s.clone();
+    bad.files[0].sha256 = "invalid".into();
+    assert!(db.append_event(&m, &e, &[bad]).is_err());
+    assert!(db.snapshot(s.id).is_err());
+    assert!(db.search(e.repo_id, "stamina").unwrap().is_empty());
+    db.append_event(&m, &e, &[s]).unwrap();
+}
+#[test]
+fn fts_is_rebuildable() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    let mut db = Store::open(&p).unwrap();
+    let (m, e, s) = common::input();
+    let receipt = db.append_event(&m, &e, &[s]).unwrap();
+    rusqlite::Connection::open(&p)
+        .unwrap()
+        .execute("DELETE FROM event_search", [])
+        .unwrap();
+    db.rebuild_index().unwrap();
+    assert_eq!(
+        db.search(e.repo_id, "stamina").unwrap(),
+        vec![receipt.event_id]
+    );
+}
+#[test]
+fn migration_preserves_legacy_entries_and_backup() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    {
+        let c = rusqlite::Connection::open(&p).unwrap();
+        c.execute_batch("CREATE TABLE entries(id TEXT PRIMARY KEY,request_key TEXT UNIQUE,payload TEXT,bytes BLOB); INSERT INTO entries VALUES('old','key','event',X'636F6465');PRAGMA user_version=1;").unwrap();
+    }
+    let db = Store::open(&p).unwrap();
+    assert_eq!(db.read("old").unwrap(), b"code");
+    assert!(p.with_extension("v1.bak").exists());
+}
+#[test]
+fn crash_worker() {
+    if let Ok(p) = std::env::var("AGAI_TEST_CRASH_DB") {
+        let mut db = Store::open(std::path::Path::new(&p)).unwrap();
+        let input = std::fs::read_to_string(format!("{p}.json")).unwrap();
+        let (m, e, s): (RequestMeta, EventInput, Snapshot) = serde_json::from_str(&input).unwrap();
+        db.append_event(&m, &e, &[s]).unwrap();
+        std::process::abort();
+    }
+}
+#[test]
+fn crash_before_ack_recovers() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    let (m, e, s) = common::input();
+    std::fs::write(
+        format!("{}.json", p.display()),
+        serde_json::to_vec(&(&m, &e, &s)).unwrap(),
+    )
+    .unwrap();
+    let status = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "crash_worker", "--nocapture"])
+        .env("AGAI_TEST_CRASH_DB", &p)
+        .status()
+        .unwrap();
+    assert!(!status.success());
+    let mut db = Store::open(&p).unwrap();
+    assert_eq!(db.snapshot(s.id).unwrap(), s);
+    let receipt = db.append_event(&m, &e, &[s]).unwrap();
+    assert_eq!(
+        db.search(e.repo_id, "stamina").unwrap(),
+        vec![receipt.event_id]
+    );
+}
+#[test]
+fn failure_after_snapshot_insert_rolls_back_everything() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    let mut db = Store::open(&p).unwrap();
+    let (m, e, s) = common::input();
+    let c = rusqlite::Connection::open(&p).unwrap();
+    c.execute_batch("CREATE TRIGGER reject_event BEFORE INSERT ON events BEGIN SELECT RAISE(ABORT,'test disk failure'); END;").unwrap();
+    assert!(db.append_event(&m, &e, &[s.clone()]).is_err());
+    assert!(db.snapshot(s.id).is_err());
+    c.execute("DROP TRIGGER reject_event", []).unwrap();
+    db.append_event(&m, &e, &[s]).unwrap();
+}
+#[test]
+fn migration_failure_keeps_version_and_data() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    let c = rusqlite::Connection::open(&p).unwrap();
+    c.execute_batch("CREATE TABLE entries(id TEXT PRIMARY KEY,request_key TEXT UNIQUE,payload TEXT,bytes BLOB);CREATE VIEW events AS SELECT 1;PRAGMA user_version=1;").unwrap();
+    assert!(Store::open(&p).is_err());
+    assert_eq!(
+        c.query_row("PRAGMA user_version", [], |r| r.get::<_, u32>(0))
+            .unwrap(),
+        1
+    );
+}
+#[test]
+fn retry_migration_captures_new_v1_writes() {
+    let d = tempfile::tempdir().unwrap();
+    let p = d.path().join("db");
+    let c = rusqlite::Connection::open(&p).unwrap();
+    c.execute_batch("CREATE TABLE entries(id TEXT PRIMARY KEY,request_key TEXT UNIQUE,payload TEXT,bytes BLOB);CREATE VIEW events AS SELECT 1;PRAGMA user_version=1;").unwrap();
+    assert!(Store::open(&p).is_err());
+    c.execute_batch("DROP VIEW events;INSERT INTO entries VALUES('later','key','event',X'78');")
+        .unwrap();
+    Store::open(&p).unwrap();
+    let mut found_latest = false;
+    for entry in std::fs::read_dir(d.path()).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_some_and(|e| e == "bak") {
+            let backup = rusqlite::Connection::open(path).unwrap();
+            let n: i64 = backup
+                .query_row("SELECT count(*) FROM entries WHERE id='later'", [], |r| {
+                    r.get(0)
+                })
+                .unwrap();
+            found_latest |= n == 1;
+        }
+    }
+    assert!(
+        found_latest,
+        "A fresh backup must preserve writes after the failed migration"
+    );
+}

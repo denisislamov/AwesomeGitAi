@@ -1,1 +1,14 @@
-fn main(){let Some(path)=std::env::args_os().nth(1)else{eprintln!("Usage: agai-host PROFILE_DIRECTORY (dedicated private directory outside worktree)");std::process::exit(2)};let result=agai_host::Profile::acquire(std::path::Path::new(&path)).and_then(|p|agai_host::serve(&p));if let Err(e)=result{eprintln!("{e}");std::process::exit(1)}}
+fn main() {
+    let Some(path) = std::env::args_os().nth(1) else {
+        eprintln!(
+            "Usage: agai-host PROFILE_DIRECTORY (dedicated private directory outside worktree)"
+        );
+        std::process::exit(2)
+    };
+    let result =
+        agai_host::Profile::acquire(std::path::Path::new(&path)).and_then(|p| agai_host::serve(&p));
+    if let Err(e) = result {
+        eprintln!("{e}");
+        std::process::exit(1)
+    }
+}

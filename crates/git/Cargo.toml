@@ -1,0 +1,11 @@
+[package]
+name="agai-git"
+version="0.1.0"
+edition="2024"
+[dependencies]
+agai-protocol = {path="../protocol"}
+serde_json="1"
+uuid={version="1",features=["v4","v5"]}
+libc="0.2"
+[dev-dependencies]
+tempfile="3"

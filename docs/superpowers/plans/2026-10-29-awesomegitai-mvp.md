@@ -120,6 +120,8 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 - [ ] Run test above, `cargo test -p agai-protocol`, `pnpm contracts:check` → PASS; contract generation produces no diff. Validate paths containing Unicode, newline and invalid UTF8 without lossy command roundtrip.
 - [ ] Commit only task files: `feat: add host protocol and durable event store`.
 
+> Execution update 2026-10-30: T1 completed for macOS (`d76a496`). Future feature DTOs follow their implementations. Historical checklist wording above is retained; actual test names and evidence are in `docs/architecture/storage-and-ipc.md`.
+
 ## T2 · Git-чтение, снимки и актуальность anchors
 
 **Files:** create `crates/git/src/{reader.rs,runner.rs}`, `crates/git/tests/read_repo.rs`, `crates/domain/src/{snapshot.rs,anchors.rs,scope.rs}`, `crates/domain/tests/snapshot_anchor.rs`, `crates/host/src/watch.rs`.
@@ -130,6 +132,8 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 - [ ] Implement argv Git reader with `-z` output where supported, pagination, bounded process output/cancellation, file watcher coalescing + rescan on missed notifications. Snapshot capture сохраняет HEAD/index/worktree как разные immutable manifests; сравнение материализует выбранные bytes обеих сторон в SQLite до выдачи comparison ID. Snapshot reads verify content/generation before and after capture; retry bounded or STALE_STATE. Manifest distinguishes exclusions.
 - [ ] Run both suites → PASS; watch p95 ≤1 sec, hot first useful graph ≤2 sec, cold ≤5 sec on recorded fixtures. Head/ref graph uses true parent edges, not arrival order.
 - [ ] Commit `feat: read repositories and bind explanations to snapshots`.
+
+> Execution update 2026-10-30: T2 backend completed for macOS; see `docs/architecture/t2-results.md` for regression, review fixes and scope decisions. Backend timing passed; rendered graph and controlled cold-cache measurements remain T3/T10. T0 multi-platform gate remains open under the user-authorized macOS-only continuation.
 
 ## T3 · Desktop code workspace и нижний Git Log
 

@@ -25,3 +25,9 @@ See docs/architecture/m0-results.md. User deferred Android and requested continu
 ## T1 completed for current macOS scope
 
 Added Rust protocol + generated TS checks, raw-path roundtrip, snapshot/event atomic transactions, scoped idempotency, migration backup/rollback, rebuildable FTS, private Unix IPC and profile singleton. Tests include concurrent writers, abort before acknowledgement, insertion failure rollback, schema migration failure and real socket framing/version checks. Future feature DTOs/capabilities are introduced with T3–T9 instead of publishing unimplemented operations. Windows/mobile excluded per user. See architecture/storage-and-ipc.md for limits.
+
+## T2 completed for current macOS backend scope
+
+Implemented Git reads/history, scoped raw-byte snapshot capture, immutable comparisons/anchors, repository registry and coalescing rescan watcher. T1 committed as `d76a496`; T2 includes seven important final-review fixes. Final regression: 50 Rust tests, 4 editor tests, contract/type/build checks and real macOS host IPC smoke. Backend benchmark: startup/first history 355 ms; watch p95 848 ms. Full evidence, scope decisions and the deferred minor anchor-allocation optimization: [T2 results](../architecture/t2-results.md).
+
+T1/T2 backend deliverables are complete. GUI graph/cold-cache acceptance moves to T3/T10; it is not certified by backend timings. Android, Windows and iOS remain deferred. T3 has not started; no MCP server or Git mutation capability is claimed.
