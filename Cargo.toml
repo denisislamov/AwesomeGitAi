@@ -1,0 +1,4 @@
+[workspace]
+members = ["crates/storage"]
+exclude = ["spikes/platform-probe/src-tauri"]
+resolver = "3"

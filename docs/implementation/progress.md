@@ -15,3 +15,9 @@ T0: in progress, только preflight. Сборки и тесты прилож
 ## T0 local checkpoint
 
 See docs/architecture/m0-results.md. User deferred Android and requested continued macOS/backend work. Provisional desktop go; original full T0 acceptance remains open. Four editor tests pass, Vite and macOS debug build verified, packaged Git hello works. T1 starts next on this explicitly limited basis.
+
+## T1 — первый проверенный шаг
+
+Добавлен agai-storage: SQLite WAL/FULL, атомарная запись payload+bytes, идемпотентность, конфликт повторного ключа, отказ неизвестной версии. Первые пять тестов наблюдались RED→GREEN; дополнительно проверены одновременные подключения и сохранение исходной записи после конфликта. Всего 7 storage-тестов; регрессия probe 4 теста.
+
+Это частичная реализация T1, не завершение задачи. Ещё нужны protocol/генерация TS, HostService/IPC/ACL/singleton, структурированные snapshots/events/projections/FTS и crash recovery/migration checks. Ключ низкоуровневого Store должен быть scoped вызывающим host; этот примитив не является публичным API. T2 не начата.
