@@ -5,13 +5,17 @@ use std::{
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    sync::Mutex,
+    sync::{
+        Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
     time::{Duration, Instant},
 };
 pub struct DesktopHost {
     pub profile: PathBuf,
     pub binary: PathBuf,
     child: Mutex<Option<Child>>,
+    closing: AtomicBool,
     roots: Mutex<HashSet<PathBuf>>,
 }
 impl DesktopHost {
@@ -20,10 +24,23 @@ impl DesktopHost {
             profile,
             binary,
             child: Mutex::new(None),
+            closing: AtomicBool::new(false),
             roots: Mutex::new(HashSet::new()),
         }
     }
+    pub fn shutdown(&self) {
+        self.closing.store(true, Ordering::SeqCst);
+        if let Ok(mut child) = self.child.lock() {
+            if let Some(mut process) = child.take() {
+                let _ = process.kill();
+                let _ = process.wait();
+            }
+        }
+    }
     fn connect(&self) -> Result<UnixStream> {
+        if self.closing.load(Ordering::SeqCst) {
+            return Err(AppError::new("HOST_OFFLINE"));
+        }
         let socket = self.profile.join("host.sock");
         if let Ok(stream) = UnixStream::connect(&socket) {
             return Ok(stream);
@@ -32,6 +49,9 @@ impl DesktopHost {
             .child
             .lock()
             .map_err(|_| AppError::new("HOST_OFFLINE"))?;
+        if self.closing.load(Ordering::SeqCst) {
+            return Err(AppError::new("HOST_OFFLINE"));
+        }
         if child
             .as_mut()
             .is_none_or(|p| p.try_wait().ok().flatten().is_some())
@@ -128,17 +148,31 @@ fn safe_path(root: &Path, path: Option<&RepoPath>) -> Result<PathBuf> {
 }
 impl Drop for DesktopHost {
     fn drop(&mut self) {
-        if let Ok(child) = self.child.get_mut() {
-            if let Some(mut p) = child.take() {
-                let _ = p.kill();
-                let _ = p.wait();
-            }
-        }
+        self.shutdown();
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_shutdown_stops_owned_child_before_process_exit() {
+        let d = tempfile::tempdir().unwrap();
+        let host = DesktopHost::new(d.path().join("profile"), d.path().join("binary"));
+        let child = Command::new("/bin/sleep").arg("60").spawn().unwrap();
+        let pid = child.id();
+        *host.child.lock().unwrap() = Some(child);
+        host.shutdown();
+        let alive = Command::new("/bin/kill")
+            .args(["-0", &pid.to_string()])
+            .stderr(Stdio::null())
+            .status()
+            .unwrap()
+            .success();
+        assert!(
+            !alive,
+            "Explicit shutdown must terminate the owned host before Tauri exits without Drop"
+        );
+    }
     #[test]
     fn external_paths_reject_traversal_and_escaping_symlinks() {
         let d = tempfile::tempdir().unwrap();
@@ -160,6 +194,18 @@ mod tests {
         let mut bad = RepoPath::from_bytes(b"ok").unwrap();
         bad.raw_base64 = "Li4=".into();
         assert!(safe_path(&root, Some(&bad)).is_err());
+    }
+    #[test]
+    fn shutdown_preserves_external_process_and_rejects_restart() {
+        let d = tempfile::tempdir().unwrap();
+        let host = DesktopHost::new(d.path().join("profile"), d.path().join("binary"));
+        let mut external = Command::new("/bin/sleep").arg("60").spawn().unwrap();
+        host.shutdown();
+        let still_alive = external.try_wait().unwrap().is_none();
+        let _ = external.kill();
+        let _ = external.wait();
+        assert!(still_alive);
+        assert_eq!(host.connect().unwrap_err().code, "HOST_OFFLINE");
     }
     #[test]
     fn external_paths_require_opened_repository() {

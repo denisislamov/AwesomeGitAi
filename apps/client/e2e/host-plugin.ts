@@ -21,10 +21,13 @@ export function testHost() {
     join(repo, "Large.cs"),
     Array.from({ length: 1900 }, (_, i) => `// line ${i}`).join("\n"),
   );
+  writeFileSync(join(repo, "EarlierDeleted.cs"), "class EarlierDeleted {}\n");
   git("add", ".");
   git("commit", "-qm", "Initial wallet");
   const first = git("rev-parse", "HEAD");
   git("branch", "feature");
+  git("rm", "EarlierDeleted.cs");
+  git("commit", "-qm", "Remove old class");
   writeFileSync(join(repo, "Readme.md"), "# Project\n");
   git("add", ".");
   git("commit", "-qm", "Document wallet");

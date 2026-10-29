@@ -53,6 +53,7 @@ type State = {
   error: string | null;
   historyStale: boolean;
   historyBusy: boolean;
+  openingRepository: boolean;
 };
 export const revisionLabel = (r: Revision): string =>
   typeof r === "string"
@@ -84,6 +85,7 @@ export class Workspace {
     error: null,
     historyStale: false,
     historyBusy: false,
+    openingRepository: false,
   };
   private listeners = new Set<() => void>();
   private epoch = 0;
@@ -108,14 +110,16 @@ export class Workspace {
     });
   }
   async openRepository(path: string) {
-    const epoch = ++this.epoch;
+    let epoch = ++this.epoch;
     ++this.opening;
-    this.patch({ busy: true, error: null });
+    this.patch({ busy: true, error: null, openingRepository: true });
     try {
       const r = await this.api.desktop({ kind: "OpenRepository", path });
       if (r.kind !== "Repository") throw Error("INVALID_RESPONSE");
       if (epoch !== this.epoch) return;
+      epoch = ++this.epoch; // Accepting a new scope invalidates every old-scope request.
       this.patch({
+        openingRepository: false,
         repo: r.state,
         root: r.root,
         branches: r.branches,
@@ -154,6 +158,8 @@ export class Workspace {
       });
     } catch (e) {
       if (epoch === this.epoch) this.error(e);
+    } finally {
+      if (epoch === this.epoch) this.patch({ openingRepository: false });
     }
   }
   scope() {
@@ -172,6 +178,8 @@ export class Workspace {
     target: Revision = "Worktree",
     refresh = false,
   ) {
+    if (this.state.openingRepository || !this.state.repo) return;
+    const scope = this.scope();
     const epoch = this.epoch;
     const serial = ++this.opening;
     const id = JSON.stringify([path.raw_base64, base, target]);
@@ -184,13 +192,20 @@ export class Workspace {
     try {
       const data = await this.api.desktop({
         kind: "CompareFile",
-        scope: this.scope(),
+        scope,
         path,
         base,
         target,
       });
       if (epoch !== this.epoch || serial !== this.opening) return;
       if (data.kind !== "FileComparison") throw Error("INVALID_RESPONSE");
+      if (
+        [data.base, data.target].some(
+          (s) =>
+            s.repo_id !== scope.repo_id || s.worktree_id !== scope.worktree_id,
+        )
+      )
+        throw Error("SCOPE_DENIED");
       const tab: CodeTab = {
         id,
         path,
@@ -248,6 +263,7 @@ export class Workspace {
     return this.state.commits.filter((c) => visible.has(c.oid));
   }
   async more() {
+    if (this.state.openingRepository) return;
     const epoch = this.epoch;
     const cursor = this.state.cursor;
     if (!cursor) return;
@@ -273,11 +289,17 @@ export class Workspace {
     }
   }
   async poll() {
-    if (!this.state.repo) return;
+    if (!this.state.repo || this.state.openingRepository) return;
+    const scope = this.scope();
     const epoch = this.epoch;
     try {
       const r = await this.api.read({ kind: "GetRepoState", ...this.scope() });
       if (epoch !== this.epoch || r.kind !== "RepoState") return;
+      if (
+        r.state.repo_id !== scope.repo_id ||
+        r.state.worktree_id !== scope.worktree_id
+      )
+        throw Error("SCOPE_DENIED");
       const generation = r.state.generation;
       const changed = generation !== this.state.repo?.generation;
       this.patch({
@@ -305,7 +327,12 @@ export class Workspace {
     }
   }
   async refreshHistory() {
-    if (!this.state.repo || this.state.historyBusy) return;
+    if (
+      !this.state.repo ||
+      this.state.historyBusy ||
+      this.state.openingRepository
+    )
+      return;
     this.patch({ historyBusy: true });
     const epoch = this.epoch;
     try {

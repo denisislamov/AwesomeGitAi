@@ -106,3 +106,40 @@ fn desktop_does_not_allow_principal_forgery_or_arbitrary_commands() {
         "INVALID_REQUEST"
     );
 }
+
+#[test]
+fn arbitrary_base_lists_deletions_before_target_parent() {
+    let d = tempfile::tempdir().unwrap();
+    let repo = d.path().join("repo");
+    std::fs::create_dir(&repo).unwrap();
+    git(&repo, &["init", "-q"]);
+    git(&repo, &["config", "user.name", "Test"]);
+    git(&repo, &["config", "user.email", "test@example.invalid"]);
+    std::fs::write(repo.join("X.cs"), "class X {}\n").unwrap();
+    git(&repo, &["add", "."]);
+    git(&repo, &["commit", "-qm", "A"]);
+    let a = git(&repo, &["rev-parse", "HEAD"]);
+    git(&repo, &["rm", "X.cs"]);
+    git(&repo, &["commit", "-qm", "B"]);
+    std::fs::write(repo.join("Y.cs"), "class Y {}\n").unwrap();
+    git(&repo, &["add", "."]);
+    git(&repo, &["commit", "-qm", "C"]);
+    let c = git(&repo, &["rev-parse", "HEAD"]);
+    let db = d.path().join("db");
+    let opened = rpc(&db, json!({"kind":"OpenRepository","path":repo}));
+    let state = &opened["Ok"]["state"];
+    let scope = json!({"repo_id":state["repo_id"],"worktree_id":state["worktree_id"]});
+    let details = rpc(
+        &db,
+        json!({"kind":"CommitDetails","scope":scope,"oid":c,"base":a}),
+    );
+    assert_eq!(details["Ok"]["base_oid"], a);
+    let paths = details["Ok"]["paths"].as_array().unwrap();
+    assert_eq!(
+        paths
+            .iter()
+            .map(|p| p["display"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        vec!["X.cs", "Y.cs"]
+    );
+}

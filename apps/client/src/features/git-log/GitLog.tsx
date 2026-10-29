@@ -61,6 +61,7 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
           kind: "CommitDetails",
           scope: workspace.scope(),
           oid: s.selectedCommit,
+          base,
         })
         .then((r) => {
           if (active && r.kind === "CommitDetails") setDetails(r);
@@ -69,15 +70,13 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
     return () => {
       active = false;
     };
-  }, [s.selectedCommit, s.repo?.repo_id]);
+  }, [s.selectedCommit, s.repo?.repo_id, s.repo?.worktree_id, base]);
   useEffect(() => setBase(null), [s.repo?.repo_id, s.repo?.worktree_id]);
   const open = (path: RepoPath) => {
     if (details)
       void workspace.openFile(
         path,
-        base || details.parents[0]
-          ? { Commit: { oid: base ?? details.parents[0] } }
-          : "Empty",
+        details.base_oid ? { Commit: { oid: details.base_oid } } : "Empty",
         { Commit: { oid: details.oid } },
       );
   };

@@ -238,3 +238,47 @@ it("switching to an existing tab cancels a pending file selection", async () => 
   expect(w.state.activeTab).toBe(id);
   expect(w.state.busy).toBe(false);
 });
+
+it("repository transition refuses old-scope file requests and ignores old polls", async () => {
+  const f = fixture();
+  let openB!: (r: DesktopResponse) => void;
+  let finishPoll!: (r: ReadResponse) => void;
+  let fileRequests = 0;
+  const desktop = f.api.desktop;
+  f.api.desktop = (r) => {
+    if (r.kind === "OpenRepository" && r.path === "/B")
+      return new Promise((resolve) => (openB = resolve));
+    if (r.kind === "CompareFile") fileRequests++;
+    return desktop(r);
+  };
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  await w.openFile(path);
+  const initial = fileRequests;
+  f.api.read = (r) =>
+    r.kind === "GetRepoState"
+      ? new Promise((resolve) => (finishPoll = resolve))
+      : Promise.resolve({
+          kind: "History",
+          page: { commits: [], cursor: null },
+        });
+  const poll = w.poll();
+  const opening = w.openRepository("/B");
+  await w.openFile({
+    ...path,
+    display: "Other.cs",
+    raw_base64: "T3RoZXIuY3M=",
+  });
+  expect(fileRequests).toBe(initial);
+  openB({
+    kind: "Repository",
+    state: { ...state, repo_id: "B", worktree_id: "B-wt" },
+    root: "/B",
+    branches: [],
+  });
+  await opening;
+  finishPoll({ kind: "RepoState", state });
+  await poll;
+  expect(w.state.repo?.repo_id).toBe("B");
+  expect(w.state.tabs).toEqual([]);
+});

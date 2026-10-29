@@ -77,6 +77,13 @@ pub fn run() {
             host_desktop,
             open_external
         ])
-        .run(tauri::generate_context!())
-        .expect("Desktop startup failed");
+        .build(tauri::generate_context!())
+        .expect("Desktop startup failed")
+        .run(|app, event| {
+            if matches!(event, tauri::RunEvent::Exit) {
+                if let Some(host) = app.try_state::<Arc<bridge::DesktopHost>>() {
+                    host.shutdown();
+                }
+            }
+        });
 }

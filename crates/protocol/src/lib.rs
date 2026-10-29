@@ -366,6 +366,7 @@ pub enum DesktopRequest {
     CommitDetails {
         scope: RepoScope,
         oid: String,
+        base: Option<String>,
     },
     ListFiles {
         scope: RepoScope,
@@ -397,6 +398,7 @@ pub enum DesktopResponse {
     },
     CommitDetails {
         oid: String,
+        base_oid: Option<String>,
         author: String,
         date: String,
         message: String,

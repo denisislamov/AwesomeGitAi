@@ -16,15 +16,15 @@ Explanation panel and card share an exact comparison/snapshot/side/line selectio
 
 The native external-open boundary permits only Rider or Terminal, only an opened repository, and validated canonical paths within it. It uses fixed argv, never a shell command assembled from repository content. Missing external applications return an error.
 
-## Verification before final review
+## Verification
 
-- 53 Rust workspace tests, including subprocess helper tests; 2 native bridge tests.
-- 7 client state/graph tests; 4 prior editor probe tests.
-- 7 Playwright scenarios against a real disposable Git repository and the actual host process: real diff, old/deleted side, branch and commit selection, exact explanation target, stale refresh, 1280/1024/390 layouts, keyboard invocation, read-only code, cached 1900-line file switching/scroll restore, root commit and snapshot comparison.
+- 54 Rust workspace tests, including subprocess helper tests; 4 native bridge tests.
+- 8 client state/graph tests; 4 prior editor probe tests.
+- 8 Playwright scenarios against a real disposable Git repository and the actual host process: real diff, old/deleted side, branch and commit selection, exact explanation target, stale refresh, 1280/1024/390 layouts, keyboard invocation, read-only code, cached 1900-line file switching/scroll restore, root commit and snapshot comparison.
 - TypeScript build/typecheck, Rust formatting, generated contract drift check and whitespace checks.
 - macOS debug `.app` built and launched. Native UI opened the actual project repository, listed files/refs/commits, displayed `CodeReader.tsx` through IPC and showed its snapshot-bound explanation card. Native UI evidence was inspected through the accessibility tree. This does not certify Windows/mobile or distribution signing.
 
-Performance on the disposable 100,000-commit / 10,000-file / 1,000-dirty-file fixture: first rendered graph after opening repository, five observations: 2346 / 1837 / 1912 / 1860 / 2333 ms. Hot history refresh: 1507 / 1976 / 1455 / 1944 / 1471 ms. Cached 1900-line file switch: 12.2 ms. These pass the 5 s / 2 s / 200 ms budgets in this run; the hot history margin is small. OS disk caches were not forcibly cleared, and these are local samples rather than a release hardware matrix.
+Performance on the disposable 100,000-commit / 10,000-file / 1,000-dirty-file fixture: first rendered graph after opening repository, five observations: 2337 / 1839 / 2332 / 1828 / 1828 ms. Hot history refresh: 1515 / 1463 / 1482 / 1442 / 1444 ms. Cached 1900-line file switch: 7.2 ms. These pass the 5 s / 2 s / 200 ms budgets in this run; these measurements are not a cross-machine guarantee. OS disk caches were not forcibly cleared, and these are local samples rather than a release hardware matrix.
 
 ## Running it
 
@@ -43,4 +43,18 @@ Regression: `pnpm test`, `pnpm typecheck`, `pnpm contracts:check`, `scripts/carg
 - The production bundle still warns about a roughly 878 kB uncompressed JS chunk containing editor parsers. It loads locally; further splitting is a follow-up optimization.
 - This is read-only T3, not the entire MVP. T4 supplies real explanations/MCP; T5 supplies Git writes; T3a supplies usages and semantic relationships; T6/T6a supply simulation/language help.
 
-Final review status: pending. Review fixes and deferred findings will be recorded below before closing T3.
+## Final independent review and corrections
+
+Review range `2a5dafe..6997fbd`: no critical findings; three important findings corrected in one pass without a second review.
+
+1. Repository transitions: prevent old-scope operations during opening; accepting the new repository invalidates prior requests again; comparison and polling results validate captured repo/worktree scope. Deferred-response regression observed failure then passed.
+2. Arbitrary commit baseline: `CommitDetails` now returns paths and `base_oid` for the selected base→target pair. Deleted files from intermediate commits remain available. A three-commit Git fixture observed failure then passed; browser coverage verifies the complete UI path.
+3. Native lifecycle: explicit `RunEvent::Exit` calls shutdown for the owned child; a closing guard prevents restarting it during teardown. Externally owned hosts are not killed. A child-process regression observed failure then passed, plus an external-process preservation test.
+
+The corrected macOS bundle builds. The pre-fix native UI was tested end to end, and the exit defect was observed through an actually connectable host socket after Cmd+Q. The final manual Cmd+Q recheck is pending because the Mac locked; the user was asked to unlock it. Automated shutdown tests passed, but they do not substitute for this final native acceptance step.
+
+Deferred minor findings:
+- Collapsing Git Log unmounts it and resets its local search and selected comparison baseline. Existing code tabs remain intact; select the base again after reopening.
+- Immutable `Empty` baselines are conservatively treated as mutable by stale detection, so a root-commit view may show an unnecessary stale warning after a worktree change. Captured historical bytes do not change.
+
+Review scope rulings: staging, network credentials and mutation races remain T5/T10; foreign explanation ingestion and imports remain T4/T7/T8; Windows/mobile/remote remain deferred; semantic usages and teaching views remain T3a/T6/T6a. T3 does not expose those capabilities. Snapshot browsing and complete-history indexing remain explicit follow-up work; loaded-history filtering and UUID comparison are usable now. Cost: these capabilities cannot be advertised as present in this build.

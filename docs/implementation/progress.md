@@ -31,3 +31,9 @@ Added Rust protocol + generated TS checks, raw-path roundtrip, snapshot/event at
 Implemented Git reads/history, scoped raw-byte snapshot capture, immutable comparisons/anchors, repository registry and coalescing rescan watcher. T1 committed as `d76a496`; T2 includes seven important final-review fixes. Final regression: 50 Rust tests, 4 editor tests, contract/type/build checks and real macOS host IPC smoke. Backend benchmark: startup/first history 355 ms; watch p95 848 ms. Full evidence, scope decisions and the deferred minor anchor-allocation optimization: [T2 results](../architecture/t2-results.md).
 
 T1/T2 backend deliverables are complete. GUI graph/cold-cache acceptance moves to T3/T10; it is not certified by backend timings. Android, Windows and iOS remain deferred. T3 has not started; no MCP server or Git mutation capability is claimed.
+
+## T3 — desktop implementation and final review
+
+Implementation commit `6997fbd`: React/Tauri read-only workspace with real local host, code/diff, file tabs, Git Log and snapshot-bound explanation placeholders. macOS native app built/launched and repository→file→context checked. Final review found three important issues; corrected repository transition isolation, arbitrary-base file lists and explicit owned-host exit. 54 Rust workspace, 4 native, 8 UI and 4 editor tests pass; final browser regression recorded in [T3 report](../architecture/t3-results.md). Two minor findings are documented there.
+
+The corrected bundle builds. Final manual Cmd+Q recheck is pending Mac unlock; automated shutdown tests pass. T3 implementation is delivered, native acceptance retains that explicit open item. Android/Windows/iOS remain deferred. No T4 implementation has started.

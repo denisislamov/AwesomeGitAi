@@ -146,6 +146,8 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 - [ ] Run `pnpm --filter @agai/client test -- workspace` and `pnpm e2e -- workspace` → PASS. Check 1280/1024/390 widths, keyboard and screen-reader labels; hot file switch ≤200 ms (≤2000 lines). Playwright proves React, packaged app is checked separately.
 - [ ] Commit `feat: add code centered desktop workspace`.
 
+> Execution update 2026-10-30: T3 implementation committed as `6997fbd`, with final-review corrections following. See `docs/architecture/t3-results.md` for tests, performance, scope decisions and two deferred minors. The corrected macOS bundle builds; final manual Quit lifecycle recheck awaits Mac unlock. T3 native acceptance is not declared fully closed until that check.
+
 ## T4 · MCP, объяснения и история решений — первый end-to-end сценарий
 
 **Files:** create `crates/mcp/src/{main.rs,tools.rs}`, `crates/domain/src/{decisions.rs,context.rs,evidence.rs}`, `crates/domain/tests/decision_history.rs`, `crates/mcp/tests/tools.rs`, `crates/mcp/tests/transport_parity.rs`, `apps/client/src/features/explanation/DecisionHistory.tsx`, `docs/integrations/rider.md`.

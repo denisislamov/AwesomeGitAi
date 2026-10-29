@@ -52,7 +52,7 @@ impl HostService {
                     root: reader.root.to_string_lossy().into_owned(),
                 }
             }
-            DesktopRequest::CommitDetails { scope, oid } => {
+            DesktopRequest::CommitDetails { scope, oid, base } => {
                 validate_oid(&oid)?;
                 let r = self.reader(scope.repo_id, scope.worktree_id)?;
                 let raw = r.run(&["show", "-s", "--format=%an%x00%aI%x00%B%x00%P", &oid, "--"])?;
@@ -64,7 +64,12 @@ impl HostService {
                     .split_whitespace()
                     .map(str::to_owned)
                     .collect();
-                let paths = if let Some(parent) = parents.first() {
+                if let Some(ref base) = base {
+                    validate_oid(base)?;
+                    r.run(&["cat-file", "-e", &format!("{base}^{{commit}}")])?;
+                }
+                let base_oid = base.or_else(|| parents.first().cloned());
+                let paths = if let Some(parent) = base_oid.as_ref() {
                     r.run(&[
                         "diff-tree",
                         "--no-commit-id",
@@ -91,6 +96,7 @@ impl HostService {
                 };
                 DesktopResponse::CommitDetails {
                     oid,
+                    base_oid,
                     author: String::from_utf8_lossy(fields[0]).into_owned(),
                     date: String::from_utf8_lossy(fields[1]).into_owned(),
                     message: String::from_utf8_lossy(fields[2]).trim().into(),

@@ -190,3 +190,29 @@ test("historical root commit and snapshot comparison keep working tab intact", a
   await expect(page.locator(".breadcrumbs")).toContainText("Снимок");
   await expect(page.locator(".cm-content")).toHaveText(working!);
 });
+
+test("chosen base lists files deleted before the target parent", async ({
+  page,
+  request,
+}) => {
+  const info = await (await request.get("/test-info")).json();
+  await page.goto("/e2e/");
+  await page.getByLabel("Путь к репозиторию").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Открыть репозиторий", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Коммит Initial wallet" }).click();
+  await page.getByRole("button", { name: "Взять за базу сравнения" }).click();
+  await page.getByRole("button", { name: "Коммит Document wallet" }).click();
+  await page
+    .getByLabel("Сведения о коммите")
+    .getByRole("button", { name: "EarlierDeleted.cs", exact: true })
+    .click();
+  await expect(page.getByText("Файл удалён", { exact: true })).toBeVisible();
+  await expect(page.locator(".cm-content")).toContainText(
+    "class EarlierDeleted {}",
+  );
+  await expect(page.locator(".breadcrumbs")).toContainText(
+    info.first.slice(0, 8),
+  );
+});
