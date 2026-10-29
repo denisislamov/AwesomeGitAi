@@ -1,0 +1,11 @@
+# macOS host boundary (T1)
+
+Rust protocol DTOs are authoritative; `pnpm contracts:generate` produces the checked-in TypeScript declarations and `pnpm contracts:check` detects drift. `RepoPath` transports raw Unix bytes independently of its lossy display label. Windows UTF16 and mobile transports remain outside current scope. Future feature-specific DTOs are added with their implementation; absent features are not advertised as capabilities.
+
+The dedicated profile directory must be owned by the current UID and have mode 0700. A held flock prevents a second host process. Unix socket mode 0600 limits connections to this OS user; this is not a sandbox against malicious processes running as that same user. MCP/remote principals are denied by this local read boundary; authenticated gateways are later tasks. Frame length is a big-endian u32 capped at 16 MiB with two-second read/write timeouts. No client-supplied principal is accepted. Run `cargo run -p agai-host -- /absolute/private/profile`; the parent directory must exist. Profile storage must be outside a repository.
+
+The database uses WAL and synchronous FULL. Acknowledgement follows the commit of event plus all snapshot manifests. Idempotency is scoped to repo/worktree/key and compares a canonical typed payload fingerprint. Retry request IDs do not change identity. Snapshot IDs are immutable. FTS is a rebuildable projection of events; `rebuild_index` drops/recreates it. The legacy append primitive remains internal to storage and is not exposed over IPC.
+
+Migration 1→2 makes a SQLite-consistent v1.bak before migration. Schema changes and user_version commit in one transaction; failure leaves the old version intact. Unknown newer schemas are refused. Downgrade is explicit: stop the host, retain the current database/WAL as a recovery copy, restore the pre-migration backup under the old binary. Never automatically restore over newer user data. Rebuild derived FTS after restoring if needed.
+
+Crash test aborts a subprocess after durable commit but before client acknowledgement, then verifies retry returns the original receipt. A trigger-induced insertion failure checks rollback of snapshots already inserted within the transaction. These do not simulate power loss or disk hardware faults.

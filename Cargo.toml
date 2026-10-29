@@ -1,4 +1,4 @@
 [workspace]
-members = ["crates/storage"]
+members = ["crates/storage", "crates/protocol", "crates/host"]
 exclude = ["spikes/platform-probe/src-tauri"]
 resolver = "3"

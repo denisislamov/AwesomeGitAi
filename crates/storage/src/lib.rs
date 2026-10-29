@@ -10,16 +10,11 @@ impl Store {
         connection.busy_timeout(Duration::from_secs(5)).map_err(|e|e.to_string())?;
         connection.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;").map_err(|e| e.to_string())?;
         let version: u32 = connection.query_row("PRAGMA user_version", [], |r|r.get(0)).map_err(|e|e.to_string())?;
-        if version > 1 { return Err("UNSUPPORTED_VERSION".into()); }
-        connection.execute_batch("BEGIN IMMEDIATE;
-          CREATE TABLE IF NOT EXISTS entries (
-            id TEXT PRIMARY KEY NOT NULL,
-            request_key TEXT UNIQUE NOT NULL,
-            payload TEXT NOT NULL,
-            bytes BLOB NOT NULL
-          );
-          PRAGMA user_version=1;
-          COMMIT;").map_err(|e|e.to_string())?;
+        if version > 2 { return Err("UNSUPPORTED_VERSION".into()); }
+        if version == 1 && !path.with_extension("v1.bak").exists() {
+            connection.execute("VACUUM INTO ?1", [path.with_extension("v1.bak").to_string_lossy().as_ref()]).map_err(|e|e.to_string())?;
+        }
+        connection.execute_batch(include_str!("../migrations/002.sql")).map_err(|e|e.to_string())?;
         Ok(Self { connection })
     }
 
@@ -45,3 +40,4 @@ impl Store {
         self.connection.query_row("SELECT bytes FROM entries WHERE id=?1",[id],|row|row.get(0)).map_err(|e|e.to_string())
     }
 }
+mod events;

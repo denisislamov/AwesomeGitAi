@@ -1,0 +1,11 @@
+{
+  "name": "awesomegitai",
+  "private": true,
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "contracts:check": "node scripts/check-contracts.ts",
+    "contracts:generate": "node scripts/check-contracts.ts --write",
+    "test": "scripts/cargo-local.sh test --workspace && pnpm --dir spikes/platform-probe test"
+  },
+  "type": "module"
+}

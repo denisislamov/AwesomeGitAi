@@ -1,0 +1,13 @@
+[package]
+name = "agai-host"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+agai-protocol = {path="../protocol"}
+agai-storage = {path="../storage"}
+serde_json = "1"
+fs2 = "0.4"
+libc = "0.2"
+[dev-dependencies]
+tempfile = "3"
+uuid = {version="1",features=["v4"]}
