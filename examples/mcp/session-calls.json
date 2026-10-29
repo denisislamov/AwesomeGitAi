@@ -1,0 +1,315 @@
+[
+  {
+    "tool": "integration_guide",
+    "arguments": {
+      "schema_version": 1
+    }
+  },
+  {
+    "tool": "context_get",
+    "arguments": {
+      "schema_version": 1,
+      "repo_id": "00000000-0000-4000-8000-000000000001",
+      "worktree_id": "00000000-0000-4000-8000-000000000002",
+      "task": "Объяснить отказ TrySpend при недостаточном ресурсе",
+      "paths": [
+        "Gameplay/Resources/StaminaPool.cs"
+      ],
+      "budget_chars": 8000
+    }
+  },
+  {
+    "tool": "session_open",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000102",
+      "idempotency_key": "00000000-0000-4000-8000-000000000202",
+      "repo_id": "00000000-0000-4000-8000-000000000001",
+      "worktree_id": "00000000-0000-4000-8000-000000000002",
+      "task": "Объяснить отказ TrySpend при недостаточном ресурсе",
+      "actor": "ExampleHarness",
+      "expected_generation": "example-generation-returned-by-guide"
+    }
+  },
+  {
+    "tool": "snapshot_capture",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000103",
+      "idempotency_key": "00000000-0000-4000-8000-000000000203",
+      "session_id": "00000000-0000-4000-8000-000000000003",
+      "paths": [
+        "Gameplay/Resources/StaminaPool.cs"
+      ],
+      "expected_generation": "example-generation-after-edit"
+    }
+  },
+  {
+    "tool": "decision_record",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000104",
+      "idempotency_key": "00000000-0000-4000-8000-000000000204",
+      "decision": {
+        "session_id": "00000000-0000-4000-8000-000000000003",
+        "snapshot_id": "00000000-0000-4000-8000-000000000004",
+        "summary": "Проверить ресурс перед списанием",
+        "behavior": "При недостатке ресурса вернуть false, сохранив запас.",
+        "rationale": "Правило расхода сосредоточено внутри TrySpend.",
+        "constraints": [
+          "Пример предполагает последовательный доступ в одном потоке."
+        ],
+        "alternatives": [
+          {
+            "description": "Проверять Current в вызывающем коде",
+            "reason_not_chosen": "Пришлось бы повторять правило для каждого вызывающего метода."
+          }
+        ],
+        "anchors": [
+          {
+            "comparison_id": "00000000-0000-4000-8000-000000000005",
+            "snapshot_id": "00000000-0000-4000-8000-000000000004",
+            "path": "Gameplay/Resources/StaminaPool.cs",
+            "side": "new",
+            "start_line": 7,
+            "end_line": 11,
+            "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "source": "agent_reported"
+      }
+    }
+  },
+  {
+    "tool": "event_append",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000105",
+      "idempotency_key": "00000000-0000-4000-8000-000000000205",
+      "session_id": "00000000-0000-4000-8000-000000000003",
+      "snapshot_id": "00000000-0000-4000-8000-000000000004",
+      "kind": "observation",
+      "text": "Проверка ресурса теперь предшествует списанию.",
+      "parent_event_ids": [],
+      "source": "agent_reported"
+    }
+  },
+  {
+    "tool": "evidence_record",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000106",
+      "idempotency_key": "00000000-0000-4000-8000-000000000206",
+      "session_id": "00000000-0000-4000-8000-000000000003",
+      "snapshot_id": "00000000-0000-4000-8000-000000000004",
+      "decision_ids": [
+        "00000000-0000-4000-8000-000000000006"
+      ],
+      "check": "DeniedSpendKeepsCurrent",
+      "status": "not_run",
+      "environment": "Синтетический пример контракта; тест не запускался",
+      "summary": "В этом примере проверка ещё не выполнялась.",
+      "source": "agent_reported"
+    }
+  },
+  {
+    "tool": "decision_supersede",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000107",
+      "idempotency_key": "00000000-0000-4000-8000-000000000207",
+      "old_decision_id": "00000000-0000-4000-8000-000000000006",
+      "expected_revision": 1,
+      "reason": "Уточнено ограничение: атомарность между потоками не гарантируется.",
+      "new_decision": {
+        "session_id": "00000000-0000-4000-8000-000000000003",
+        "snapshot_id": "00000000-0000-4000-8000-000000000004",
+        "summary": "Проверить ресурс перед списанием",
+        "behavior": "При недостатке ресурса вернуть false, сохранив запас.",
+        "rationale": "Правило расхода сосредоточено внутри TrySpend.",
+        "constraints": [
+          "Только последовательный доступ; блокировки между потоками здесь нет."
+        ],
+        "alternatives": [
+          {
+            "description": "Проверять Current в вызывающем коде",
+            "reason_not_chosen": "Пришлось бы повторять правило для каждого вызывающего метода."
+          }
+        ],
+        "anchors": [
+          {
+            "comparison_id": "00000000-0000-4000-8000-000000000005",
+            "snapshot_id": "00000000-0000-4000-8000-000000000004",
+            "path": "Gameplay/Resources/StaminaPool.cs",
+            "side": "new",
+            "start_line": 7,
+            "end_line": 11,
+            "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ],
+        "source": "agent_reported"
+      }
+    }
+  },
+  {
+    "tool": "trace_record",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000108",
+      "idempotency_key": "00000000-0000-4000-8000-000000000208",
+      "session_id": "00000000-0000-4000-8000-000000000003",
+      "snapshot_id": "00000000-0000-4000-8000-000000000004",
+      "label": "TrySpend(20) при Current=10",
+      "kind": "educational_simulation",
+      "inputs": [
+        {
+          "name": "Current",
+          "type": "float",
+          "value": 10
+        },
+        {
+          "name": "cost",
+          "type": "float",
+          "value": 20
+        }
+      ],
+      "assumptions": [
+        "Модель двух точек остановки; вызывающая функция вне scope."
+      ],
+      "entry_step_id": "check",
+      "steps": [
+        {
+          "id": "check",
+          "phase": "before_instruction",
+          "location": {
+            "comparison_id": "00000000-0000-4000-8000-000000000005",
+            "snapshot_id": "00000000-0000-4000-8000-000000000004",
+            "path": "Gameplay/Resources/StaminaPool.cs",
+            "side": "new",
+            "start_line": 7,
+            "end_line": 7,
+            "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "frames": [
+            {
+              "id": "frame1",
+              "parent_id": null,
+              "function": "TrySpend",
+              "location": {
+                "comparison_id": "00000000-0000-4000-8000-000000000005",
+                "snapshot_id": "00000000-0000-4000-8000-000000000004",
+                "path": "Gameplay/Resources/StaminaPool.cs",
+                "side": "new",
+                "start_line": 7,
+                "end_line": 7,
+                "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              },
+              "locals": [
+                {
+                  "name": "Current",
+                  "type": "float",
+                  "value": 10
+                },
+                {
+                  "name": "cost",
+                  "type": "float",
+                  "value": 20
+                }
+              ]
+            }
+          ],
+          "explanation": "10 меньше 20: проверка приводит к отказу без списания.",
+          "next": "done",
+          "over": "done",
+          "into": null,
+          "out": null,
+          "result": null
+        },
+        {
+          "id": "done",
+          "phase": "completed",
+          "location": {
+            "comparison_id": "00000000-0000-4000-8000-000000000005",
+            "snapshot_id": "00000000-0000-4000-8000-000000000004",
+            "path": "Gameplay/Resources/StaminaPool.cs",
+            "side": "new",
+            "start_line": 8,
+            "end_line": 8,
+            "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "frames": [],
+          "explanation": "Метод вернул false; Current остался 10.",
+          "next": null,
+          "over": null,
+          "into": null,
+          "out": null,
+          "result": false
+        }
+      ]
+    }
+  },
+  {
+    "tool": "diagram_record",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000109",
+      "idempotency_key": "00000000-0000-4000-8000-000000000209",
+      "session_id": "00000000-0000-4000-8000-000000000003",
+      "snapshot_id": "00000000-0000-4000-8000-000000000004",
+      "label": "Проверка и отказ",
+      "kind": "pipeline",
+      "nodes": [
+        {
+          "id": "check",
+          "label": "Проверить Current < cost",
+          "anchor": {
+            "comparison_id": "00000000-0000-4000-8000-000000000005",
+            "snapshot_id": "00000000-0000-4000-8000-000000000004",
+            "path": "Gameplay/Resources/StaminaPool.cs",
+            "side": "new",
+            "start_line": 7,
+            "end_line": 7,
+            "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        },
+        {
+          "id": "reject",
+          "label": "Вернуть false",
+          "anchor": {
+            "comparison_id": "00000000-0000-4000-8000-000000000005",
+            "snapshot_id": "00000000-0000-4000-8000-000000000004",
+            "path": "Gameplay/Resources/StaminaPool.cs",
+            "side": "new",
+            "start_line": 8,
+            "end_line": 8,
+            "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "check",
+          "to": "reject",
+          "label": "Ресурса недостаточно",
+          "basis": "agent_inferred"
+        }
+      ],
+      "source": "agent_reported"
+    }
+  },
+  {
+    "tool": "session_close",
+    "arguments": {
+      "schema_version": 1,
+      "request_id": "00000000-0000-4000-8000-000000000110",
+      "idempotency_key": "00000000-0000-4000-8000-000000000210",
+      "session_id": "00000000-0000-4000-8000-000000000003",
+      "final_snapshot_id": "00000000-0000-4000-8000-000000000004",
+      "outcome": "partial",
+      "summary": "Записано объяснение и ограничение, проверка не запускалась.",
+      "unresolved": [
+        "Запустить DeniedSpendKeepsCurrent."
+      ]
+    }
+  }
+]
