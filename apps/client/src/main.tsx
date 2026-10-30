@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { App } from "./app";
 import type { WorkspaceApi } from "./workspace";
@@ -25,6 +26,12 @@ const api: WorkspaceApi = {
   desktop: (r) =>
     request<DesktopResponse>("host_desktop", { meta: meta(), desktop: r }),
 };
+if (!new URLSearchParams(window.location.search).has("panel"))
+  listen<string>("workspace-command", (event) => {
+    window.dispatchEvent(
+      new CustomEvent("agai-command", { detail: event.payload }),
+    );
+  }).catch((error) => console.error("Native menu listener failed", error));
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App

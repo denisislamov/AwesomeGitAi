@@ -69,3 +69,8 @@ English UI, recorded step explanations, typed variables/deltas, stack/frame navi
 T3a has started with isolated language-adapter probes; usage hints are not yet connected to the product. Correct task order from the plan addendum: T6 → T3a → T6a → T7.
 
 T6 implementation commit `12e4241`; bundled macOS host/MCP learning smoke also passes. T3a initial adapter verification: Roslyn5.6/.NET10.0.302 distinguishes overload/override/interface/direct field access; TypeScript6.0.3 verifies field references; Jedi0.20.1 verifies shadowed file-local references. All three probes RED→GREEN. [Probe scope and remaining implementation gates](../../spikes/code-relations/README.md). This is a T3a starting checkpoint, not A30 acceptance or a shipped usages feature.
+
+
+## Compact workspace + T6 native follow-up
+
+Approved UI simplification delivered: native command menus, on-demand forms/settings, one editor context row, expandable revision IDs and simplified learning headings. Final native trace, keyboard, diagram, detached/redocked panel and Quit checks passed. Fixed a real bundled ELK cleanup crash discovered during native acceptance, with RED→GREEN regression. Final UI50, browser10 functional rerun, earlier full11 including100k, Rust95/probe4/native8, contracts/typecheck/macOS bundle pass. [Evidence and limits](../architecture/compact-workspace-results.md). T6 pending native acceptance is closed; T3a remains at its existing adapter-probe checkpoint. Local commit only.

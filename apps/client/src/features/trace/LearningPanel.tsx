@@ -40,19 +40,12 @@ export function LearningPanel({ workspace: w }: { workspace: Workspace }) {
                 .filter((i) => i.kind === s.learningMode)
                 .map((i) => (
                   <option key={i.id} value={i.id}>
-                    {i.title} · {i.snapshot_id.slice(0, 8)}
+                    {i.title}
                   </option>
                 ))}
             </select>
             <button onClick={() => void w.refreshLearning()}>Refresh</button>
           </div>
-          {s.learningRecord?.item.kind === s.learningMode && (
-            <p className="snapshot-notice">
-              Pinned snapshot {s.learningRecord.item.snapshot_id.slice(0, 8)}.
-              This model describes that recorded version, not your current
-              working copy.
-            </p>
-          )}
           {s.learningMode === "trace" ? (
             <TracePlayer key={s.learningRecord?.item.id} workspace={w} />
           ) : (

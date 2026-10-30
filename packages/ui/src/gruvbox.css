@@ -1185,3 +1185,190 @@ code {
   width: 100%;
   max-width: none;
 }
+
+/* Compact command chrome: one global row and one contextual editor row. */
+.compact-topbar {
+  min-height: 38px;
+  padding: 3px 8px;
+  gap: 10px;
+  overflow: visible;
+}
+.compact-topbar nav {
+  display: flex;
+  gap: 2px;
+}
+.repository-switcher {
+  max-width: min(42vw, 400px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.command-menu {
+  position: relative;
+}
+.command-menu-items {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 120;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px #0008;
+}
+.command-menu-items button {
+  text-align: left;
+  white-space: nowrap;
+}
+.command-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: #0005;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: min(12vh, 80px) 12px 12px;
+}
+.command-dialog {
+  width: min(560px, 100%);
+  max-height: calc(100vh - min(12vh, 80px) - 24px);
+  overflow: auto;
+  min-width: 0;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 15px 45px #0009;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.command-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.command-dialog input,
+.command-dialog select {
+  min-width: 0;
+  max-width: 100%;
+}
+.command-dialog form,
+.repository-dialog-form,
+.editor-settings,
+.panel-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.repository-dialog-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recent-repo {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.recent-repo small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.code-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  min-height: 34px;
+  border-bottom: 1px solid var(--border);
+}
+.context-spacer {
+  flex: 1;
+}
+.code-actions-host {
+  min-width: 0;
+}
+.code-context-bar .reader-actions {
+  border: 0;
+  padding: 0;
+  min-height: 0;
+  gap: 4px;
+  overflow: visible;
+}
+.code-context-bar button {
+  white-space: nowrap;
+}
+.revision-details {
+  min-width: 0;
+}
+.revision-details summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.revision-popup {
+  position: absolute;
+  z-index: 80;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 10px;
+  max-width: min(520px, 85vw);
+  overflow-wrap: anywhere;
+  box-shadow: 0 8px 24px #0008;
+}
+.git-controls {
+  padding: 0;
+  border: 0;
+}
+.git-controls [hidden],
+[hidden] {
+  display: none !important;
+}
+.git-panel-actions {
+  align-self: flex-start;
+}
+.source-note {
+  font-size: inherit;
+  color: var(--muted);
+  margin: 4px 0 8px;
+}
+.learning-picker {
+  margin-bottom: 4px;
+}
+.learning-panel .segmented {
+  padding: 3px 6px;
+}
+@media (max-width: 700px) {
+  .compact-topbar {
+    gap: 3px;
+  }
+  .compact-topbar nav {
+    gap: 0;
+  }
+  .compact-topbar button {
+    padding: 4px;
+  }
+  .repository-switcher {
+    max-width: 140px;
+  }
+  .code-context-bar {
+    flex-wrap: wrap;
+  }
+  .revision-details summary {
+    max-width: 160px;
+  }
+}

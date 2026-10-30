@@ -1,3 +1,5 @@
+import { createPortal } from "react-dom";
+import { Dialog } from "../commands/CommandUI";
 import React, { useEffect, useRef, useState } from "react";
 import { EditorState, Compartment } from "@codemirror/state";
 import {
@@ -64,6 +66,7 @@ export function CodeReader({
   light,
   ignoreWhitespace,
   showDeleted,
+  actionsHost,
 }: {
   tab: CodeTab;
   workspace: Workspace;
@@ -71,6 +74,7 @@ export function CodeReader({
   light: boolean;
   ignoreWhitespace: boolean;
   showDeleted: boolean;
+  actionsHost?: HTMLElement | null;
 }) {
   const parent = useRef<HTMLDivElement>(null);
   const editor = useRef<EditorView | null>(null);
@@ -82,6 +86,7 @@ export function CodeReader({
     start: 1,
     end: 1,
   });
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [line, setLine] = useState("1");
   useEffect(() => {
     if (!parent.current) return;
@@ -355,71 +360,102 @@ export function CodeReader({
       lines(b, c.fromB, c.toB),
     );
   };
+  const actions = (
+    <div className="reader-actions">
+      <button onClick={() => setActionsOpen(true)}>Code actions</button>{" "}
+      <button
+        className="explain-button"
+        onClick={() =>
+          workspace.explain(
+            selected.current.side,
+            selected.current.start,
+            selected.current.end,
+          )
+        }
+      >
+        Explain selection
+      </button>
+    </div>
+  );
   return (
-    <div className="reader">
-      <div className="reader-actions">
-        {canStage && (
-          <>
+    <div
+      className="reader"
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setActionsOpen(true);
+      }}
+    >
+      {actionsHost ? createPortal(actions, actionsHost) : actions}
+      {actionsOpen && (
+        <Dialog title="Code actions" onClose={() => setActionsOpen(false)}>
+          <div className="editor-settings">
+            {" "}
+            {canStage && (
+              <>
+                <button
+                  onClick={() => {
+                    const s = selected.current;
+                    const lines = selectionLines(s.start, s.end);
+                    setActionsOpen(false);
+                    void workspace.prepareSelection(
+                      s.side === "Old" ? lines : [],
+                      s.side === "New" ? lines : [],
+                    );
+                  }}
+                >
+                  Selected lines → Index…
+                </button>
+                <button
+                  onClick={() => {
+                    setActionsOpen(false);
+                    prepareHunk();
+                  }}
+                >
+                  Hunk at cursor → Index…
+                </button>
+              </>
+            )}
             <button
               onClick={() => {
-                const s = selected.current;
-                const lines = selectionLines(s.start, s.end);
-                void workspace.prepareSelection(
-                  s.side === "Old" ? lines : [],
-                  s.side === "New" ? lines : [],
-                );
+                setActionsOpen(false);
+                if (editor.current) openSearchPanel(editor.current);
               }}
             >
-              Selected lines → Index…
+              Search code ⌘F
             </button>
-            <button onClick={prepareHunk}>Hunk at cursor → Index…</button>
-          </>
-        )}
-        <span className="readonly">◉ Read only</span>
-        <button
-          onClick={() => editor.current && openSearchPanel(editor.current)}
-        >
-          Search code ⌘F
-        </button>
-        <label>
-          Line{" "}
-          <input
-            aria-label="Go to line"
-            type="number"
-            min="1"
-            value={line}
-            onChange={(e) => setLine(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && editor.current) {
-                const v = editor.current;
-                const n = Math.max(
-                  1,
-                  Math.min(v.state.doc.lines, Number(line) || 1),
-                );
-                v.dispatch({
-                  selection: { anchor: v.state.doc.line(n).from },
-                  effects: EditorView.scrollIntoView(v.state.doc.line(n).from, {
-                    y: "center",
-                  }),
-                });
-                v.focus();
-              }
-            }}
-          />
-        </label>
-        <button
-          className="explain-button"
-          onClick={() =>
-            workspace.explain(
-              selected.current.side,
-              selected.current.start,
-              selected.current.end,
-            )
-          }
-        >
-          Explain selection
-        </button>
-      </div>
+            <label>
+              Line{" "}
+              <input
+                aria-label="Go to line"
+                type="number"
+                min="1"
+                value={line}
+                onChange={(e) => setLine(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && editor.current) {
+                    const v = editor.current;
+                    const n = Math.max(
+                      1,
+                      Math.min(v.state.doc.lines, Number(line) || 1),
+                    );
+                    v.dispatch({
+                      selection: { anchor: v.state.doc.line(n).from },
+                      effects: EditorView.scrollIntoView(
+                        v.state.doc.line(n).from,
+                        {
+                          y: "center",
+                        },
+                      ),
+                    });
+                    setActionsOpen(false);
+                    v.focus();
+                  }
+                }}
+              />
+            </label>
+          </div>
+        </Dialog>
+      )}
       {file.state === "Absent" && (
         <div className="deleted-label">File deleted</div>
       )}

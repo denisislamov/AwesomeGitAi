@@ -34,13 +34,17 @@ export function TracePlayer({ workspace: w }: { workspace: Workspace }) {
         }
       }}
     >
-      <h3>{t.title}</h3>
-      <p className="source-note">
-        Educational model · {s.learningRecord?.item.source} · not observed
-        execution
+      <p
+        className="source-note"
+        title="Educational model, not observed execution"
+      >
+        Simulation · not executed · recorded version
       </p>
       <details>
         <summary>Inputs and assumptions</summary>
+        <p>
+          Source: {s.learningRecord?.item.source} · snapshot {t.snapshot_id}
+        </p>
         <ul>
           {t.assumptions.map((a, i) => (
             <li key={i}>{a}</li>
@@ -73,7 +77,10 @@ export function TracePlayer({ workspace: w }: { workspace: Workspace }) {
         <button disabled={!step.over} onClick={() => void w.moveTrace("over")}>
           Step over
         </button>
-        <button disabled={!step.out || step.frames.length < 2} onClick={() => void w.moveTrace("out")}>
+        <button
+          disabled={!step.out || step.frames.length < 2}
+          onClick={() => void w.moveTrace("out")}
+        >
           Step out
         </button>
         <button onClick={() => void w.moveTrace("restart")}>Restart</button>

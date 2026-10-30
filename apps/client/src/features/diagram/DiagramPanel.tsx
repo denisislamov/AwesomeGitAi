@@ -77,7 +77,8 @@ export function DiagramPanel({ workspace: w }: { workspace: Workspace }) {
       });
     return () => {
       cancelled = true;
-      elk.terminateWorker();
+      // The bundled engine runs in-process and has no Worker to terminate.
+      // Ignore the pending layout result after this panel closes or changes.
     };
   }, [d]);
   if (!d)
@@ -89,13 +90,13 @@ export function DiagramPanel({ workspace: w }: { workspace: Workspace }) {
     );
   return (
     <section aria-label="Dependency diagram">
-      <h3>{d.title}</h3>
       <p>
-        Agent-reported model · snapshot {d.snapshot_id.slice(0, 8)}. Dashed
-        edges are inferred or unknown.
+        Agent-reported model · recorded version. Dashed edges are inferred or
+        unknown.
       </p>
       <details>
-        <summary>Assumptions</summary>
+        <summary>Assumptions and source</summary>
+        <p>Snapshot {d.snapshot_id}</p>
         <ul>
           {d.assumptions.map((a, i) => (
             <li key={i}>{a}</li>

@@ -53,17 +53,18 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
         "explanation " + (s.explanationLayout === "popover" ? "popover" : "")
       }
     >
-      <header>
-        <span>Explanation</span>
-        <button
-          aria-label="Close explanation"
-          onClick={() => workspace.showExplanation(false)}
-        >
-          ×
-        </button>
-      </header>
+      {s.explanationLayout === "popover" && (
+        <header>
+          <span>Explanation</span>
+          <button
+            aria-label="Close explanation"
+            onClick={() => workspace.showExplanation(false)}
+          >
+            ×
+          </button>
+        </header>
+      )}
       <div className="explanation-body">
-        <span className="eyebrow">CODE CONTEXT</span>
         {tab?.stale && (
           <p role="status">
             This snapshot is stale. The worktree changed; this is the previous

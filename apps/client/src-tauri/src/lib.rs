@@ -1,5 +1,6 @@
 mod bridge;
 mod integration;
+mod menus;
 mod windows;
 use agai_protocol::*;
 use std::{process::Command, sync::Arc};
@@ -77,6 +78,7 @@ async fn open_external(
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
+            menus::install(app.handle())?;
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
             let packaged = app.path().resource_dir()?.join("bin/agai-host");

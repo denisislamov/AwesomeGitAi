@@ -5,13 +5,16 @@ test("real host: code, old side, history selection, stale state and keyboard exp
 }) => {
   const info = await (await request.get("/test-info")).json();
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
     .click();
   await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
   await expect(page.locator(".cm-content").last()).toContainText("50");
+  await page.getByRole("button", { name: "View options", exact: true }).click();
   await page.getByLabel("Diff view").selectOption("split");
+  await page.getByRole("button", { name: "Close View options" }).click();
   await expect(page.locator(".cm-mergeView")).toBeVisible();
   await expect(page.locator(".cm-content").first()).toContainText("30");
   await page
@@ -21,7 +24,9 @@ test("real host: code, old side, history selection, stale state and keyboard exp
     page.getByRole("complementary", { name: "Explanation" }),
   ).toContainText("No explanation yet");
   const target = await page.getByTestId("explanation-target").textContent();
+  await page.getByRole("button", { name: "View options", exact: true }).click();
   await page.getByLabel("Explanation placement").selectOption("popover");
+  await page.getByRole("button", { name: "Close View options" }).click();
   await expect(page.getByTestId("explanation-target")).toHaveText(target!);
   await page.getByRole("button", { name: "Commit Initial wallet" }).click();
   await expect(page.getByLabel("Commit details")).toContainText("UI Test");
@@ -60,6 +65,7 @@ for (const width of [1280, 1024, 390])
     await page.setViewportSize({ width, height: 850 });
     const info = await (await request.get("/test-info")).json();
     await page.goto("/e2e/");
+    await page.getByRole("button", { name: "Choose repository" }).click();
     await page.getByLabel("Repository path").fill(info.repo);
     await page
       .getByRole("button", { name: "Open repository", exact: true })
@@ -94,6 +100,7 @@ test("cached 1900-line file switch and scroll restoration", async ({
 }) => {
   const info = await (await request.get("/test-info")).json();
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
@@ -139,6 +146,7 @@ test("100k commit repository renders first graph within budget", async ({
   const hot: number[] = [];
   for (let i = 0; i < 5; i++) {
     await page.goto("/e2e/");
+    await page.getByRole("button", { name: "Choose repository" }).click();
     await page.getByLabel("Repository path").fill(info.bench);
     const begin = Date.now();
     await page
@@ -171,27 +179,38 @@ test("historical root commit and snapshot comparison keep working tab intact", a
 }) => {
   const info = await (await request.get("/test-info")).json();
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
     .click();
   await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
   const working = await page.locator(".cm-content").textContent();
-  const ids = await page.locator(".snapshot-status span").allTextContents();
+  await page.locator(".revision-details summary").click();
+  const ids = [
+    await page.getByTestId("base-version-id").textContent(),
+    await page.getByTestId("target-version-id").textContent(),
+  ];
+  await page.locator(".revision-details summary").click();
   await page.getByRole("button", { name: "Commit Initial wallet" }).click();
   await page
     .getByLabel("Commit details")
     .getByRole("button", { name: "Code.cs", exact: true })
     .click();
   await expect(page.locator(".cm-content")).toContainText("Balance = 30");
-  await expect(page.locator(".breadcrumbs")).toContainText("Empty tree");
+  await expect(page.locator(".revision-details summary")).toContainText(
+    "Empty tree",
+  );
   await page.getByRole("tab", { name: /Code.cs Worktree/ }).click();
   await expect(page.locator(".cm-content")).toHaveText(working!);
+  await page.getByRole("button", { name: "View options", exact: true }).click();
   await page.getByRole("button", { name: "Snapshots", exact: true }).click();
-  await page.getByLabel("Base snapshot ID").fill(ids[0].slice(2));
-  await page.getByLabel("Target snapshot ID").fill(ids[1].slice(2));
+  await page.getByLabel("Base snapshot ID").fill(ids[0]!);
+  await page.getByLabel("Target snapshot ID").fill(ids[1]!);
   await page.getByRole("button", { name: "Compare snapshots" }).click();
-  await expect(page.locator(".breadcrumbs")).toContainText("Snapshot");
+  await expect(page.locator(".revision-details summary")).toContainText(
+    "Snapshot",
+  );
   await expect(page.locator(".cm-content")).toHaveText(working!);
 });
 
@@ -201,6 +220,7 @@ test("chosen base lists files deleted before the target parent", async ({
 }) => {
   const info = await (await request.get("/test-info")).json();
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
@@ -216,7 +236,7 @@ test("chosen base lists files deleted before the target parent", async ({
   await expect(page.locator(".cm-content")).toContainText(
     "class EarlierDeleted {}",
   );
-  await expect(page.locator(".breadcrumbs")).toContainText(
+  await expect(page.locator(".revision-details summary")).toContainText(
     info.first.slice(0, 8),
   );
 });
@@ -229,6 +249,7 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   const seeded = await request.post("/test-mcp-seed");
   expect(seeded.ok()).toBeTruthy();
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
@@ -276,6 +297,7 @@ test("partial staging preview, commit, and real drag docking", async ({
   const info = await (await request.get("/test-operations")).json();
   await page.setViewportSize({ width: 1600, height: 1050 });
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
@@ -283,6 +305,7 @@ test("partial staging preview, commit, and real drag docking", async ({
   await page
     .getByRole("button", { name: "File Selected.cs", exact: true })
     .click();
+  await page.getByRole("button", { name: "Code actions", exact: true }).click();
   await page
     .getByRole("button", { name: "Hunk at cursor → Index…", exact: true })
     .click();
@@ -299,9 +322,8 @@ test("partial staging preview, commit, and real drag docking", async ({
   const result = await (await request.get("/test-operations-state")).json();
   expect(result.index).toBe("new\n" + "keep\n".repeat(12));
   expect(result.worktree).toContain("extra");
-  await page
-    .getByText("Git actions · staging, branches, sync", { exact: true })
-    .click();
+  await page.getByRole("button", { name: "Git menu" }).click();
+  await page.getByRole("button", { name: "Commit…", exact: true }).click();
   await page.getByLabel("Commit message").fill("UI partial commit");
   await page
     .getByRole("button", { name: "Create commit", exact: true })
@@ -315,6 +337,7 @@ test("partial staging preview, commit, and real drag docking", async ({
         (await (await request.get("/test-operations-state")).json()).subject,
     )
     .toBe("UI partial commit");
+  await page.getByRole("button", { name: "Close Git", exact: true }).click();
   // Drag the title itself, not the placement menu. Persisted geometry must change.
   const title = page.locator(".dock-panel-files > .dock-title");
   const target = page.locator(".dock-panel-code");
@@ -349,6 +372,7 @@ test("real MCP trace, call stack, pinned code and diagram", async ({
   const ids = await seeded.json();
   await page.setViewportSize({ width: 1680, height: 1080 });
   await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
   await page.getByLabel("Repository path").fill(info.repo);
   await page
     .getByRole("button", { name: "Open repository", exact: true })
@@ -356,7 +380,7 @@ test("real MCP trace, call stack, pinned code and diagram", async ({
   await page.getByRole("button", { name: "Steps", exact: true }).click();
   await page.getByLabel("Recorded learning artifact").selectOption(ids.success);
   const trace = page.getByRole("region", { name: "Step explanation" });
-  await expect(trace).toContainText("not observed execution");
+  await expect(trace).toContainText("Simulation · not executed");
   await expect(page.getByLabel("New code version")).toContainText(
     "resources.TrySpend",
   );
@@ -409,6 +433,11 @@ test("real MCP trace, call stack, pinned code and diagram", async ({
   await expect(page.getByLabel("New code version")).toContainText(
     "bool TrySpend",
   );
+  // Switching away must safely dispose the bundled in-process layout engine.
+  await page.getByRole("button", { name: "Steps", exact: true }).click();
+  await page.getByRole("button", { name: "Diagram", exact: true }).click();
+  await page.getByLabel("Recorded learning artifact").selectOption(ids.diagram);
+  await expect(page.locator(".react-flow__node")).toHaveCount(3);
   await page.screenshot({
     path: "../../.superpowers/t6-learning-ui.png",
     fullPage: true,

@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import type { Workspace } from "../../workspace";
-export function GitControls({ workspace: w }: { workspace: Workspace }) {
+export function GitControls({
+  workspace: w,
+  section = "commit",
+}: {
+  workspace: Workspace;
+  section?: "commit" | "branches" | "remotes";
+}) {
   const s = w.state;
   const [message, setMessage] = useState(""),
     [branch, setBranch] = useState(""),
@@ -13,9 +19,8 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
     : (s.gitRemotes[0] ?? "");
   const targetName = target || s.repo?.branch || "";
   return (
-    <details className="git-controls">
-      <summary>Git actions · staging, branches, sync</summary>
-      <fieldset disabled={busy || !s.repo}>
+    <div className="git-controls">
+      <fieldset hidden={section !== "commit"} disabled={busy || !s.repo}>
         <legend>Commit</legend>
         <p>
           {s.repo?.status_entries.filter(
@@ -38,7 +43,7 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
           Create commit
         </button>
       </fieldset>
-      <fieldset disabled={busy || !s.repo}>
+      <fieldset hidden={section !== "branches"} disabled={busy || !s.repo}>
         <legend>Branches</legend>
         <input
           aria-label="New branch"
@@ -67,7 +72,10 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
             ))}
         </select>
       </fieldset>
-      <fieldset disabled={busy || !s.repo || !remoteName}>
+      <fieldset
+        hidden={section !== "remotes"}
+        disabled={busy || !s.repo || !remoteName}
+      >
         <legend>Remote repository</legend>
         <select
           aria-label="Git remote"
@@ -114,14 +122,14 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
           Push HEAD → {targetName}
         </button>
       </fieldset>
-      {s.repo && s.gitRemotes.length === 0 && (
+      {section === "remotes" && s.repo && s.gitRemotes.length === 0 && (
         <p>No remote configured. Add one in your terminal.</p>
       )}
       <p className="hint">
         Git uses your hooks, SSH, credential helper, and signing settings.
         Passwords are not stored by the application.
       </p>
-    </details>
+    </div>
   );
 }
 export function GitJobStatus({ workspace: w }: { workspace: Workspace }) {

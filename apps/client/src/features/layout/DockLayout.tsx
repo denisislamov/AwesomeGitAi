@@ -15,6 +15,7 @@ import {
   nativePanelsAvailable,
 } from "./native";
 import "./layout.css";
+import { Dialog } from "../commands/CommandUI";
 const titles: Record<PanelId, string> = {
   files: "Files",
   code: "Code",
@@ -25,9 +26,13 @@ const key = "agai-layout-v1";
 export function DockLayout({
   panels,
   native = nativePanelsAvailable(),
+  settingsOpen,
+  onSettingsClose,
 }: {
   panels: Record<PanelId, React.ReactNode>;
   native?: boolean;
+  settingsOpen?: boolean;
+  onSettingsClose?: () => void;
 }) {
   const [layout, dispatch] = useReducer(layoutReducer, null, () => {
     try {
@@ -218,7 +223,7 @@ export function DockLayout({
             drag.current = null;
           }}
         >
-          <strong>{titles[p]}</strong>
+          <strong>{p === "explanation" ? "Context" : titles[p]}</strong>
           <details className="dock-menu">
             <summary aria-label={`Place ${titles[p]}`}>⋮</summary>
             <div>
@@ -268,28 +273,43 @@ export function DockLayout({
   }
   return (
     <div className="dock-workspace">
-      <div className="dock-toolbar">
-        <details>
+      {settingsOpen === undefined ? (
+        <details className="dock-toolbar">
           <summary>Panels</summary>
           <div className="dock-toolbar-menu">
             {panelIds.map((p) => (
-              <button
-                key={p}
-                disabled={pending.includes(p)}
-                onClick={() => void show(p)}
-              >
+              <button key={p} onClick={() => void show(p)}>
                 {titles[p]}
-                {layout.detached.includes(p) ? " — return from window" : ""}
               </button>
             ))}
-            <button disabled={pending.length > 0} onClick={() => void reset()}>
-              Reset layout
-            </button>
+            <button onClick={() => void reset()}>Reset layout</button>
           </div>
         </details>
-        {error && <span role="alert">{error}</span>}
-        <small>Drag a title to the edge of another panel</small>
-      </div>
+      ) : (
+        settingsOpen && (
+          <Dialog title="Panels" onClose={() => onSettingsClose?.()}>
+            <div className="panel-settings">
+              {panelIds.map((p) => (
+                <button
+                  key={p}
+                  disabled={pending.includes(p)}
+                  onClick={() => void show(p)}
+                >
+                  {titles[p]}
+                  {layout.detached.includes(p) ? " — return from window" : ""}
+                </button>
+              ))}
+              <button
+                disabled={pending.length > 0}
+                onClick={() => void reset()}
+              >
+                Reset layout
+              </button>
+            </div>
+          </Dialog>
+        )
+      )}
+      {error && <span role="alert">{error}</span>}
       <div className="dock-root">
         {render(layout.tree) || (
           <button disabled={pending.length > 0} onClick={() => void reset()}>

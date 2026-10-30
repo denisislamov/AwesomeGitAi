@@ -1,6 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-export function AgentConnection({ root }: { root: string }) {
+export function AgentConnection({
+  root,
+  hiddenTrigger = false,
+}: {
+  root: string;
+  hiddenTrigger?: boolean;
+}) {
   const [open, setOpen] = useState(false),
     [data, setData] = useState<{
       config: unknown;
@@ -9,6 +15,11 @@ export function AgentConnection({ root }: { root: string }) {
     } | null>(null),
     [error, setError] = useState(""),
     [copied, setCopied] = useState("");
+  useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener("agai-dismiss-overlays", close);
+    return () => window.removeEventListener("agai-dismiss-overlays", close);
+  }, []);
   async function load() {
     setOpen(true);
     setError("");
@@ -29,7 +40,12 @@ export function AgentConnection({ root }: { root: string }) {
   }
   return (
     <>
-      <button disabled={!root} onClick={() => void load()}>
+      <button
+        data-agent-connect
+        hidden={hiddenTrigger}
+        disabled={!root}
+        onClick={() => void load()}
+      >
         Connect MCP
       </button>
       {open && (
