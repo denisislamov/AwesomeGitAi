@@ -37,3 +37,5 @@ T1/T2 backend deliverables are complete. GUI graph/cold-cache acceptance moves t
 Implementation commit `6997fbd`: React/Tauri read-only workspace with real local host, code/diff, file tabs, Git Log and snapshot-bound explanation placeholders. macOS native app built/launched and repository→file→context checked. Final review found three important issues; corrected repository transition isolation, arbitrary-base file lists and explicit owned-host exit. 54 Rust workspace, 4 native, 8 UI and 4 editor tests pass; final browser regression recorded in [T3 report](../architecture/t3-results.md). Two minor findings are documented there.
 
 The corrected bundle builds. Final manual Cmd+Q recheck is pending Mac unlock; automated shutdown tests pass. T3 implementation is delivered, native acceptance retains that explicit open item. Android/Windows/iOS remain deferred. No T4 implementation has started.
+
+2026-10-30 follow-up: final native Cmd+Q acceptance passed after unlock (repository loaded in final bundle, owned host socket refused connections after Quit). T3 closed. T4 and user-requested movable/resizable panels with separate macOS windows now in progress.

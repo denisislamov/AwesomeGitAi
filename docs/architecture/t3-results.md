@@ -51,7 +51,7 @@ Review range `2a5dafe..6997fbd`: no critical findings; three important findings 
 2. Arbitrary commit baseline: `CommitDetails` now returns paths and `base_oid` for the selected base→target pair. Deleted files from intermediate commits remain available. A three-commit Git fixture observed failure then passed; browser coverage verifies the complete UI path.
 3. Native lifecycle: explicit `RunEvent::Exit` calls shutdown for the owned child; a closing guard prevents restarting it during teardown. Externally owned hosts are not killed. A child-process regression observed failure then passed, plus an external-process preservation test.
 
-The corrected macOS bundle builds. The pre-fix native UI was tested end to end, and the exit defect was observed through an actually connectable host socket after Cmd+Q. The final manual Cmd+Q recheck is pending because the Mac locked; the user was asked to unlock it. Automated shutdown tests passed, but they do not substitute for this final native acceptance step.
+The corrected macOS bundle builds. The pre-fix native UI was tested end to end, and the exit defect was observed through an actually connectable host socket after Cmd+Q. After the user unlocked the Mac, the final bundle opened this repository through its host, then exited via Cmd+Q. The profile socket subsequently refused connections: owned-host termination passed. T3 native acceptance is closed.
 
 Deferred minor findings:
 - Collapsing Git Log unmounts it and resets its local search and selected comparison baseline. Existing code tabs remain intact; select the base again after reopening.
