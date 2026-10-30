@@ -79,3 +79,5 @@ Approved UI simplification delivered: native command menus, on-demand forms/sett
 ## T3a — implementation complete, native manual acceptance pending
 
 Semantic C#/TypeScript/Python adapters, snapshot-bound references, compact declaration lenses, grouped relations and comparison-derived changed locations, pinned navigation/Back and native command forwarding are implemented. Stronger explained-block highlighting and recorded frame-local inline values are included. Review findings and hidden-worktree snapshot provenance regression corrected. Automated regression and packaged all-language host smoke pass; exact native UI acceptance awaits Mac unlock. [T3a results, counts and explicit runtime/scope limits](../architecture/t3a-results.md). Local commits only; T6a not started.
+
+T3a native follow-up: main/detached usage navigation, Back, redock, explanation highlight, recorded inline values and Quit passed after unlock. Fixed repeated native lens replacement with widget identity equality; client72 and typecheck pass, corrected macOS bundle verified. T3a closed for macOS; T6a starts next.

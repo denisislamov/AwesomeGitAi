@@ -32,13 +32,17 @@ const savedPositions = new Map<
   string,
   { side: "Old" | "New"; anchor: number; head: number }
 >();
-class RelationsWidget extends WidgetType {
+export class RelationsWidget extends WidgetType {
   constructor(
     readonly label: string,
     readonly name: string,
     readonly open: () => void,
+    readonly identity = "",
   ) {
     super();
+  }
+  eq(other: RelationsWidget) {
+    return this.identity === other.identity && this.label === other.label && this.name === other.name;
   }
   toDOM() {
     const b = document.createElement("button");
@@ -413,6 +417,7 @@ export function CodeReader({
                 Decoration.widget({
                   widget: new RelationsWidget(l.label, l.name, () =>
                     workspace.showRelations(true, l.symbolId),
+                    `${report!.origin_snapshot_id}:${l.symbolId}`,
                   ),
                   block: true,
                   side: -1,

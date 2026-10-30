@@ -23,7 +23,7 @@ Working-tree analysis preserves the original captured files. Additional dirty/un
 - [x] Host: typed DTO/export, scoped revision-safe capture/validation, bounded subprocess with sanitized environment/temp cwd, cached bounded immutable results, missing runtime and unsupported language tests. Own Rust + generated API. Never extend old snapshot with newer working files; if current source generation cannot be established, analyze original captured scope only.
 - [x] UI: on-demand Relations via Code actions + compact declaration lenses (max three); status text distinguishes Partial/Unknown from zero, grouped snippets, accessible navigation/back preserving original revision/selection. Detached commands use existing main-owned forwarding. Tests cover late result/repo switch/revision mismatch.
 - [x] Teaching overlays: explanation block fill/border on matching side; recorded step arrow and frame-local inline values on relevant source lines only, unknown explicit, changed values distinct, mode/file/snapshot changes clear overlays. Unit + rendered editor tests.
-- [ ] Integrate and verify contracts, client/host/native suites, browser end-to-end real analyzer A30 and trace overlays, macOS build/manual usages/detach/back. Final fresh review and local commits.
+- [x] Integrate and verify contracts, client/host/native suites, browser end-to-end real analyzer A30 and trace overlays, macOS build/manual usages/detach/back. Final fresh review and local commits.
 
 ## Review focus
 - Wrong snapshot or repository result must not appear as current (host + workspace race tests).

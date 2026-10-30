@@ -1,6 +1,6 @@
 # T3a — semantic relationships and reading overlays
 
-2026-10-30, macOS development build. Implementation complete; final manual macOS A30/detached-window acceptance is pending because the Mac locked before the new bundle could be inspected. This is not a claim of completed platform acceptance.
+2026-10-30, macOS development build. Implementation and native macOS acceptance complete for the current scope.
 
 ## Behavior
 
@@ -30,8 +30,8 @@ C#/Roslyn and Node/TypeScript runtimes are bundled for the build Mac architectur
 
 One fresh read-only review found missing TS function-value references, missing explicit generic C# references, a local-name/instance-field inline-value ambiguity, and missing comparison-derived change hints. All were addressed with focused regression tests. Stronger browser coverage caught lens clicks clearing the editor selection; widgets now preserve it. An additional host test reproduced hidden newer worktree bytes entering old-snapshot analysis; conservative index-baseline provenance fixes this.
 
-## Acceptance still pending
+## Native acceptance
 
-Manual native lens → reference → Back with exact source, detached Code navigation, visible block/inline-value presentation and final Quit on the newly built app. The user was asked to unlock the Mac. Browser results and packaged host tests do not replace native UI acceptance. Android, Windows, iOS and a physical second monitor remain outside this run. No push or merge.
+Manual native lens → captured caller → Back passed in main and detached Code windows. The corrected bundle preserved the original snapshot on Back, redocked successfully, displayed resource=10/cost=20 beside the simulation line, and showed the explanation selection with a distinct fill and border. Cmd+Q closed the app and owned host. Native polling exposed lens DOM replacement; widget equality now preserves unchanged lenses, covered by a RED→GREEN test and 72 passing client tests. Android, Windows, iOS and a physical second monitor remain outside this run. No push or merge.
 
 Local evidence: `.superpowers/t3a-full-final.log`, `t3a-client-final.log`, `t3a-native.log`, `t3a-adapters-final.log`, `t3a-e2e-final.log`, `t3a-e2e-rerun.log`, `t3a-bundled-smoke.log`, `t3a-build-final.log`.
