@@ -112,3 +112,6 @@ pub use documents::DocumentChange;
 
 mod memory;
 pub use memory::*;
+
+mod history;
+pub use history::HistoryImage;

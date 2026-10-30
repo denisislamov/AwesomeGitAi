@@ -199,6 +199,10 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 
 Implementation uses one compact MemoryDialog and scope-wide erasure. Search is literal scoped matching with rebuildable derived indices. See [T7 evidence and deviations](../../architecture/t7-results.md).
 
+## T7a · Соседний репозиторий истории
+
+Разрешён пользователем 30 октября 2026. [План реализации](2026-10-30-t7a-history.md): перенос без потерь, независимые коммиты истории, восстановление SQLite и безопасное удаление. Только macOS; T8 не запускается.
+
 ## T8 · Headless host и приватный remote API
 
 **Статус: отложен по указанию пользователя 30 октября 2026. Начинать только после его явной отмашки.** Требования ниже сохранены; автоматический переход после T7 запрещён.
