@@ -45,6 +45,7 @@ export function validateTrace(t: TraceScenario) {
 export function transition(t: TraceScenario, id: string, action: StepAction) {
   const s = t.steps.find((s) => s.id === id);
   if (!s) throw Error("INVALID_TRACE_STEP");
+  if (action === "out" && s.frames.length < 2) return id;
   return s[action] ?? id;
 }
 export function selectFrame(

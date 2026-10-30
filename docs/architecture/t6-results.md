@@ -23,3 +23,7 @@ One independent final review found missing delta values and a mismatched initial
 Packaged host/MCP smoke passed using the rebuilt `.app`: success/failure traces, final values and diagram round trip in a disposable profile. The first attempt exceeded the macOS Unix socket path limit; using a short `/tmp` profile fixed the smoke harness.
 
 Run `python3 scripts/learning-smoke.py` after `scripts/desktop.sh build` to verify the bundled host/MCP in a disposable profile. This complements, but cannot replace, the pending manual GUI check. Physical second monitor, actual IDE products, mobile platforms and real debugger execution remain outside this acceptance.
+
+Native follow-up after unlock: restarted the English bundle; actual bundled MCP populated the two-file disposable repository. Verified TryDash → TrySpend opens ResourceWallet.cs, selecting the caller opens Dash.cs without advancing step3, pre-line10 resource30 / pre-line11 resource10, forward/backward deltas, and separate Return point at caller line11. Detaching Explanation preserved step6/variables in a separate native window. Final keyboard/diagram/completion/redock acceptance remains pending; user shifted focus to simplifying the UI during this check.
+
+This check found Step out incorrectly enabled at root stack depth. Added a failing root-frame transition test, then guarded both the transition and button for depth<2. Client46 tests and typecheck pass. This follow-up fix has not yet been rebuilt/rechecked in the native bundle.

@@ -86,3 +86,6 @@ it("matches the agreed cross-file TrySpend acceptance baseline", () => {
     ).toBe("10");
   }
 });
+it('does not step out of the root frame', () => {
+  expect(transition(success, success.entry_step, 'out')).toBe(success.entry_step);
+});

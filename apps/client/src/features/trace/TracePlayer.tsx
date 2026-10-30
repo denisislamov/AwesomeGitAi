@@ -73,7 +73,7 @@ export function TracePlayer({ workspace: w }: { workspace: Workspace }) {
         <button disabled={!step.over} onClick={() => void w.moveTrace("over")}>
           Step over
         </button>
-        <button disabled={!step.out} onClick={() => void w.moveTrace("out")}>
+        <button disabled={!step.out || step.frames.length < 2} onClick={() => void w.moveTrace("out")}>
           Step out
         </button>
         <button onClick={() => void w.moveTrace("restart")}>Restart</button>
