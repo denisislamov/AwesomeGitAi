@@ -5,8 +5,9 @@ use serde_json::Value;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 const PANELS: [&str; 4] = ["files", "code", "explanation", "git"];
-const ACTIONS: [&str; 24] = [
+const ACTIONS: [&str; 30] = [
     "git_action", "git_prepare", "git_apply", "git_dismiss", "git_cancel",
+    "learning_mode", "learning_refresh", "learning_open", "learning_location", "trace_move", "trace_frame",
     "select_file",
     "select_tab",
     "close_tab",

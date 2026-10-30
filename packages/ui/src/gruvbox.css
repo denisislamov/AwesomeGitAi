@@ -1067,3 +1067,121 @@ code {
   background: #1d2021;
   padding: 6px;
 }
+
+.learning-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+.learning-panel > .explanation {
+  flex: 1;
+  min-height: 0;
+}
+.learning-content {
+  overflow: auto;
+  padding: 8px;
+  min-height: 0;
+}
+.learning-picker {
+  display: flex;
+  gap: 4px;
+}
+.learning-picker select {
+  flex: 1;
+}
+.learning-content h3 {
+  font: inherit;
+  font-weight: bold;
+  margin: 8px 0;
+}
+.learning-content h4 {
+  margin: 10px 0 4px;
+}
+.learning-content ul,
+.learning-content ol {
+  padding-left: 20px;
+}
+.trace-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 8px 0;
+}
+.trace-controls button {
+  border-color: var(--border);
+}
+.trace-phase,
+.snapshot-notice {
+  color: var(--muted);
+}
+.step-explanation {
+  border-left: 3px solid var(--accent);
+  padding: 6px 8px;
+  background: var(--panel);
+}
+.trace-values {
+  width: 100%;
+  border-collapse: collapse;
+}
+.trace-values td,
+.trace-values th {
+  text-align: left;
+  padding: 4px;
+  border-bottom: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.trace-values small {
+  display: block;
+}
+.variable-changed {
+  background: #50452a;
+}
+.trace-stack button {
+  width: 100%;
+}
+.diagram-canvas {
+  height: 320px;
+  min-height: 220px;
+  border: 1px solid var(--border);
+  margin: 8px 0;
+}
+.learning-content dd {
+  margin: 0 0 4px 12px;
+}
+.learning-content details {
+  margin: 6px 0;
+}
+
+/* Preserve editor space when translated actions no longer fit one row. */
+.code-toolbar,
+.view-options,
+.reader-actions {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  flex-shrink: 0;
+  min-height: 32px;
+}
+.code-toolbar > *,
+.view-options > *,
+.reader-actions > * {
+  flex-shrink: 0;
+}
+.file-stage-actions {
+  flex-wrap: nowrap;
+  min-height: 32px;
+  flex-shrink: 0;
+}
+.file-stage-actions button {
+  flex-shrink: 0;
+}
+.file-stage-actions span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.learning-panel > .explanation {
+  width: 100%;
+  max-width: none;
+}

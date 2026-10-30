@@ -1,3 +1,8 @@
+import {
+  transition,
+  validateTrace,
+  type StepAction,
+} from "./features/trace/transition";
 import type {
   DesktopRequest,
   DesktopResponse,
@@ -13,6 +18,9 @@ import type {
   ReviewState,
   GitAction,
   GitJob,
+  LearningItem,
+  LearningRecord,
+  SourceLocation,
 } from "../../../packages/api/src/generated";
 export interface WorkspaceApi {
   read(request: ReadRequest): Promise<ReadResponse>;
@@ -40,6 +48,13 @@ export type CodeTab = {
   stale: boolean;
 };
 type State = {
+  learningMode: "explanation" | "trace" | "diagram";
+  learningItems: LearningItem[];
+  learningRecord: LearningRecord | null;
+  traceStep: string | null;
+  traceFrame: string | null;
+  tracePreviousStep: string | null;
+  learningLocation: { snapshotId: string; location: SourceLocation } | null;
   gitJob: GitJob | null;
   gitStarting: boolean;
   gitRemotes: string[];
@@ -75,16 +90,23 @@ type State = {
 export const revisionLabel = (r: Revision): string =>
   typeof r === "string"
     ? {
-        Empty: "Пустое дерево",
+        Empty: "Empty tree",
         Head: "HEAD",
         Index: "Index",
-        Worktree: "Рабочая копия",
+        Worktree: "Worktree",
       }[r]
     : "Commit" in r
       ? r.Commit.oid.slice(0, 8)
-      : `Снимок ${r.Snapshot.id.slice(0, 8)}`;
+      : `Snapshot ${r.Snapshot.id.slice(0, 8)}`;
 export class Workspace {
   state: State = {
+    learningMode: "explanation",
+    learningItems: [],
+    learningRecord: null,
+    traceStep: null,
+    traceFrame: null,
+    tracePreviousStep: null,
+    learningLocation: null,
     gitJob: null,
     gitStarting: false,
     gitRemotes: [],
@@ -113,6 +135,8 @@ export class Workspace {
   };
   private listeners = new Set<() => void>();
   private epoch = 0;
+  private learningRequest = 0;
+  private learningNavigation = 0;
   private opening = 0;
   constructor(readonly api: WorkspaceApi) {}
   subscribe = (f: () => void) => {
@@ -143,6 +167,12 @@ export class Workspace {
       if (epoch !== this.epoch) return;
       epoch = ++this.epoch; // Accepting a new scope invalidates every old-scope request.
       this.patch({
+        learningItems: [],
+        learningRecord: null,
+        traceStep: null,
+        traceFrame: null,
+        tracePreviousStep: null,
+        learningLocation: null,
         gitPreview: null,
         gitRemotes: [],
         openingRepository: false,
@@ -164,6 +194,7 @@ export class Workspace {
         historyBusy: false,
       });
       void this.refreshRemotes();
+      void this.refreshLearning();
       const [files, history] = await Promise.all([
         this.api.desktop({
           kind: "ListFiles",
@@ -191,6 +222,123 @@ export class Workspace {
     } finally {
       if (epoch === this.epoch) this.patch({ openingRepository: false });
     }
+  }
+  setLearningMode(mode: State["learningMode"]) {
+    this.patch({ learningMode: mode, explanationOpen: true });
+    void this.refreshLearning();
+  }
+  async refreshLearning() {
+    if (!this.state.repo || this.state.openingRepository) return;
+    const epoch = this.epoch;
+    try {
+      const r = await this.api.desktop({
+        kind: "LearningList",
+        scope: this.scope(),
+      });
+      if (epoch === this.epoch && r.kind === "LearningList")
+        this.patch({ learningItems: r.items });
+    } catch (e) {
+      if (epoch === this.epoch) this.error(e);
+    }
+  }
+  async openLearning(id: string) {
+    const item = this.state.learningItems.find((i) => i.id === id);
+    if (!item || this.state.openingRepository) return;
+    const epoch = this.epoch;
+    const serial = ++this.learningRequest;
+    try {
+      const r = await this.api.desktop({
+        kind: "LearningGet",
+        scope: this.scope(),
+        id,
+        artifact_kind: item.kind,
+      });
+      if (
+        epoch !== this.epoch ||
+        serial !== this.learningRequest ||
+        r.kind !== "LearningRecord"
+      )
+        return;
+      const t = r.record.trace;
+      if (t) validateTrace(t);
+      const step = t?.steps[0];
+      this.patch({
+        learningRecord: r.record,
+        learningMode: t ? "trace" : "diagram",
+        traceStep: step?.id ?? null,
+        traceFrame: step?.frames.at(-1)?.id ?? null,
+        tracePreviousStep: null,
+        learningLocation: null,
+      });
+      const location =
+        step?.location ??
+        r.record.diagram?.nodes.find((n) => n.location)?.location;
+      if (location) await this.openLearningLocation(location);
+    } catch (e) {
+      if (epoch === this.epoch) this.error(e);
+    }
+  }
+  async openLearningLocation(location: SourceLocation) {
+    const r = this.state.learningRecord;
+    if (!r || this.state.openingRepository) return;
+    const allowed = [
+      ...(r.trace?.steps.flatMap((s) => [
+        s.location,
+        ...s.frames.map((f) => f.location),
+      ]) ?? []),
+      ...(r.diagram?.nodes.map((n) => n.location) ?? []),
+    ];
+    const match = allowed.find(
+      (l) =>
+        l &&
+        l.line === location.line &&
+        l.path.raw_base64 === location.path.raw_base64,
+    );
+    if (!match) return;
+    const epoch = this.epoch;
+    const navigation = ++this.learningNavigation;
+    await this.openFile(
+      match.path,
+      { Snapshot: { id: r.item.snapshot_id } },
+      { Snapshot: { id: r.item.snapshot_id } },
+    );
+    if (
+      epoch === this.epoch &&
+      navigation === this.learningNavigation &&
+      this.state.learningRecord?.item.id === r.item.id
+    )
+      this.patch({
+        learningLocation: { snapshotId: r.item.snapshot_id, location: match },
+      });
+  }
+  async moveTrace(action: StepAction | "back" | "restart") {
+    const t = this.state.learningRecord?.trace,
+      id = this.state.traceStep;
+    if (!t || !id) return;
+    const i = t.steps.findIndex((s) => s.id === id);
+    const next =
+      action === "restart"
+        ? t.entry_step
+        : action === "back"
+          ? t.steps[Math.max(0, i - 1)].id
+          : transition(t, id, action);
+    const step = t.steps.find((s) => s.id === next)!;
+    ++this.learningNavigation;
+    this.patch({
+      tracePreviousStep: id,
+      traceStep: next,
+      traceFrame: step.frames.at(-1)?.id ?? null,
+      learningLocation: null,
+    });
+    if (step.location) await this.openLearningLocation(step.location);
+  }
+  async chooseTraceFrame(id: string) {
+    const frame = this.state.learningRecord?.trace?.steps
+      .find((s) => s.id === this.state.traceStep)
+      ?.frames.find((f) => f.id === id);
+    if (!frame) return;
+    this.patch({ traceFrame: id });
+    await this.openLearningLocation(frame.location);
   }
   async refreshRemotes() {
     if (!this.state.repo) return;
@@ -255,12 +403,12 @@ export class Workspace {
     try {
       const r = await this.api.desktop({ kind: "GitPoll", id: job.id });
       if (r.kind !== "GitJob" || this.state.gitJob?.id !== job.id) return;
-      this.patch({ gitJob: r.job });
       if (r.job.status !== "Running" && this.state.root === r.job.root) {
         await this.poll();
         await this.refreshHistory();
         void this.refreshRemotes();
       }
+      if (this.state.gitJob?.id === job.id) this.patch({ gitJob: r.job });
     } catch (e) {
       this.error(e);
     }

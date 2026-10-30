@@ -53,7 +53,7 @@ fn command(
 }
 async fn exercise(client: &rmcp::service::RunningService<rmcp::RoleClient, ()>) -> Value {
     let tools = client.list_all_tools().await.unwrap();
-    assert_eq!(tools.len(), 9);
+    assert_eq!(tools.len(), 11);
     assert!(tools.iter().all(|t| {
         !serde_json::to_string(&t.input_schema)
             .unwrap()

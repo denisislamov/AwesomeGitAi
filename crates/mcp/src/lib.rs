@@ -9,6 +9,8 @@ pub fn tool_names() -> Vec<&'static str> {
         "evidence_record",
         "decision_supersede",
         "session_close",
+        "trace_record",
+        "diagram_record",
     ]
 }
 

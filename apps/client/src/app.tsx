@@ -14,7 +14,7 @@ import {
 import { CodeReader } from "./features/code/CodeReader";
 import { GitLog } from "./features/git-log/GitLog";
 import { AgentConnection } from "./features/explanation/AgentConnection";
-import { ExplanationPanel } from "./features/explanation/ExplanationPanel";
+import { LearningPanel } from "./features/trace/LearningPanel";
 import type { Revision, RepoPath } from "../../../packages/api/src/generated";
 import "../../../packages/ui/src/gruvbox.css";
 import { DockLayout } from "./features/layout/DockLayout";
@@ -69,7 +69,7 @@ export function App({
   const [snapB, setSnapB] = useState("");
   const [showSnapshots, setShowSnapshots] = useState(false);
   const [bridgeStatus, setBridgeStatus] = useState(
-    panel ? "Ожидание основного окна…" : "",
+    panel ? "Waiting for the main window…" : "",
   );
   const applySettings = (v: PanelSettings) => {
     if (v.view) setView(v.view);
@@ -132,7 +132,7 @@ export function App({
         }
       } catch (e) {
         if (!stopped)
-          setBridgeStatus(`Связь с основным окном недоступна: ${String(e)}`);
+          setBridgeStatus(`Main window connection unavailable: ${String(e)}`);
       } finally {
         if (!stopped) timer = setTimeout(tick, 250);
       }
@@ -191,35 +191,35 @@ export function App({
   }
   const panels = {
     files: (
-      <aside className="file-tree" aria-label="Файлы репозитория">
+      <aside className="file-tree" aria-label="Repository files">
         <div className="segmented">
           <button
             aria-pressed={treeMode === "changed"}
             onClick={() => setTreeMode("changed")}
           >
-            Изменения
+            Changes
           </button>
           <button
             aria-pressed={treeMode === "all"}
             onClick={() => setTreeMode("all")}
           >
-            Все файлы
+            All files
           </button>
         </div>
         <input
-          aria-label="Поиск файлов"
-          placeholder="Найти файл…"
+          aria-label="Search files"
+          placeholder="Find a file…"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
         <div className="file-list">
           {[...groups].map(([dir, files]) => (
             <details key={dir} open>
-              <summary title={dir}>{dir === "." ? "Проект" : dir}</summary>
+              <summary title={dir}>{dir === "." ? "Project" : dir}</summary>
               {files.map((p) => (
                 <button
                   key={p.raw_base64}
-                  aria-label={`Файл ${p.display}`}
+                  aria-label={`File ${p.display}`}
                   aria-current={
                     tab?.path.raw_base64 === p.raw_base64 ? "page" : undefined
                   }
@@ -242,16 +242,16 @@ export function App({
           {s.repo && paths.length === 0 && (
             <p className="empty-small">
               {treeMode === "changed"
-                ? "Нет изменённых файлов. Перейдите во «Все файлы»."
-                : "Файлы не найдены."}
+                ? "No changed files. Switch to All files."
+                : "No files found."}
             </p>
           )}
         </div>
       </aside>
     ),
     code: (
-      <section className="code-workspace" aria-label="Код">
-        <div className="tabs" role="tablist" aria-label="Открытые версии">
+      <section className="code-workspace" aria-label="Code">
+        <div className="tabs" role="tablist" aria-label="Open versions">
           {s.tabs.map((t) => (
             <div
               className={"tab " + (t.id === s.activeTab ? "active" : "")}
@@ -267,7 +267,7 @@ export function App({
                 {t.stale ? " ●" : ""}
               </button>
               <button
-                aria-label={`Закрыть ${t.path.display}`}
+                aria-label={`Close ${t.path.display}`}
                 onClick={() => workspace.close(t.id)}
               >
                 ×
@@ -278,7 +278,7 @@ export function App({
         <GitPreview workspace={workspace} />
         <div className="code-toolbar">
           <select
-            aria-label="Режим сравнения"
+            aria-label="Comparison mode"
             value={mode}
             onChange={(e) => {
               const m = e.target.value;
@@ -292,33 +292,33 @@ export function App({
                 );
             }}
           >
-            <option value="work">Index → рабочая копия</option>
+            <option value="work">Index → worktree</option>
             <option value="index">HEAD → Index</option>
           </select>
           <select
-            aria-label="Вид сравнения"
+            aria-label="Diff view"
             value={view}
             onChange={(e) =>
               updateSettings({ view: e.target.value as typeof view })
             }
           >
             <option value="unified">Unified</option>
-            <option value="split">Рядом</option>
+            <option value="split">Side by side</option>
           </select>
           <button
             aria-pressed={showSnapshots}
             onClick={() => setShowSnapshots(!showSnapshots)}
           >
-            Снимки
+            Snapshots
           </button>
           <button
             onClick={() => workspace.showExplanation(!s.explanationOpen)}
             aria-pressed={s.explanationOpen}
           >
-            Объяснение
+            Explanation
           </button>
           <select
-            aria-label="Размещение объяснения"
+            aria-label="Explanation placement"
             value={s.explanationLayout}
             onChange={(e) =>
               workspace.setExplanationLayout(
@@ -326,8 +326,8 @@ export function App({
               )
             }
           >
-            <option value="panel">Панель справа</option>
-            <option value="popover">Карточка</option>
+            <option value="panel">Side panel</option>
+            <option value="popover">Popover</option>
           </select>
         </div>
         {showSnapshots && (
@@ -344,18 +344,18 @@ export function App({
             }}
           >
             <input
-              aria-label="Базовый snapshot ID"
-              placeholder="Базовый snapshot UUID"
+              aria-label="Base snapshot ID"
+              placeholder="Base snapshot UUID"
               value={snapA}
               onChange={(e) => setSnapA(e.target.value)}
             />
             <input
-              aria-label="Целевой snapshot ID"
-              placeholder="Целевой snapshot UUID"
+              aria-label="Target snapshot ID"
+              placeholder="Target snapshot UUID"
               value={snapB}
               onChange={(e) => setSnapB(e.target.value)}
             />
-            <button disabled={!tab}>Сравнить снимки</button>
+            <button disabled={!tab}>Compare snapshots</button>
           </form>
         )}
         {tab ? (
@@ -375,7 +375,7 @@ export function App({
                     updateSettings({ showDeleted: e.target.checked })
                   }
                 />{" "}
-                Удалённые строки −
+                Deleted lines −
               </label>
               <label>
                 <input
@@ -385,7 +385,7 @@ export function App({
                     updateSettings({ ignoreWhitespace: e.target.checked })
                   }
                 />{" "}
-                Без концевых пробелов · только вид
+                Ignore trailing whitespace · display only
               </label>
               {openExternal && !panel && (
                 <>
@@ -396,7 +396,7 @@ export function App({
                       )
                     }
                   >
-                    Открыть в Rider ↗
+                    Open in Rider ↗
                   </button>
                   <button
                     onClick={() =>
@@ -405,14 +405,14 @@ export function App({
                       )
                     }
                   >
-                    Терминал ↗
+                    Terminal ↗
                   </button>
                 </>
               )}
             </div>
             {tab.stale && (
               <div className="stale-banner" role="status">
-                Есть новые изменения. Показан прежний снимок.{" "}
+                New changes available. Showing the previous snapshot.{" "}
                 <button
                   onClick={() =>
                     void workspace.openFile(
@@ -423,7 +423,7 @@ export function App({
                     )
                   }
                 >
-                  Обновить снимок
+                  Refresh snapshot
                 </button>
               </div>
             )}
@@ -441,12 +441,10 @@ export function App({
                     })
                   }
                 >
-                  {tab.target === "Index"
-                    ? "Убрать файл из Index"
-                    : "Добавить файл в Index"}
+                  {tab.target === "Index" ? "Unstage file" : "Stage file"}
                 </button>
                 <span>
-                  Для части файла выделите строки или выберите блок ниже.
+                  Select lines or a hunk below to stage part of this file.
                 </span>
               </div>
             )}
@@ -467,20 +465,18 @@ export function App({
         ) : (
           <div className="welcome">
             <div className="welcome-symbol">{`{ }`}</div>
-            <h1>Код — в центре внимания</h1>
+            <h1>Code at the center</h1>
             <p>
-              Откройте репозиторий и выберите файл.
+              Open a repository and select a file.
               <br />
-              История, изменения и контекст останутся рядом.
+              History, changes, and context stay close.
             </p>
-            <span>
-              Локально · Контролируемые Git-операции · Снимки сохраняются
-            </span>
+            <span>Local · Guarded Git operations · Persistent snapshots</span>
           </div>
         )}
       </section>
     ),
-    explanation: <ExplanationPanel workspace={workspace} />,
+    explanation: <LearningPanel workspace={workspace} />,
     git: (
       <div className="git-panel-content">
         <GitControls workspace={workspace} />
@@ -504,7 +500,7 @@ export function App({
             {s.root ? s.root.split("/").at(-1) : "AwesomeGitAi"} · {panel}
           </strong>
           <button onClick={() => void closePanel(panel)}>
-            Вернуть в основное окно
+            Return to main window
           </button>
         </header>
         <GitJobStatus workspace={workspace} />
@@ -527,7 +523,7 @@ export function App({
         <div className="brand">
           <span className="brand-icon">⑂</span>
           <strong>AwesomeGitAi</strong>
-          <span className="stage">Код</span>
+          <span className="stage">Code</span>
         </div>
         <form
           className="repo-form"
@@ -537,26 +533,26 @@ export function App({
           }}
         >
           <input
-            aria-label="Путь к репозиторию"
+            aria-label="Repository path"
             value={root}
             onChange={(e) => setRoot(e.target.value)}
-            placeholder="/путь/к/репозиторию"
+            placeholder="/path/to/repository"
             spellCheck={false}
           />
           <button type="submit" disabled={s.busy}>
-            Открыть репозиторий
+            Open repository
           </button>
         </form>
         <button
-          title="Переключить тему"
-          aria-label="Светлая тема"
+          title="Switch theme"
+          aria-label="Light theme"
           aria-pressed={light}
           onClick={() => setLight(!light)}
         >
           {light ? "☾" : "☀"}
         </button>
         <select
-          aria-label="Масштаб интерфейса"
+          aria-label="Interface scale"
           value={scale}
           onChange={(e) => setScale(Number(e.target.value))}
         >
@@ -574,8 +570,8 @@ export function App({
         {create && (
           <>
             <input
-              aria-label="Источник clone"
-              placeholder="URL или путь remote; пусто для Init"
+              aria-label="Clone source"
+              placeholder="Remote URL or path; leave empty for Init"
               value={source}
               onChange={(e) => setSource(e.target.value)}
             />
@@ -587,7 +583,7 @@ export function App({
                 void workspace.createRepository(root, source || null)
               }
             >
-              {source ? "Клонировать" : "Создать репозиторий"} по пути выше
+              {source ? "Clone" : "Initialize repository"} at the path above
             </button>
           </>
         )}
@@ -596,7 +592,7 @@ export function App({
       <div className="repo-strip">
         <AgentConnection root={s.root} />
         <span title={s.root}>
-          {s.root ? s.root.split("/").at(-1) : "Локальный репозиторий"}
+          {s.root ? s.root.split("/").at(-1) : "Local repository"}
         </span>
         <span>⑂ {s.repo?.branch ?? "—"}</span>
         <span title={s.root}>
@@ -604,16 +600,16 @@ export function App({
         </span>
         <span className="status-text">
           {s.busy
-            ? "Чтение…"
+            ? "Loading…"
             : s.repo
-              ? `${s.repo.status_entries.length} изменённых файлов`
-              : "Откройте папку проекта"}
+              ? `${s.repo.status_entries.length} changed files`
+              : "Open a project folder"}
         </span>
       </div>
       {bridgeStatus && <div role="status">{bridgeStatus}</div>}
       {s.error && (
         <div role="alert" className="error-banner">
-          Не удалось выполнить действие: {s.error}. Открытый снимок сохранён.
+          Action failed: {s.error}. The open snapshot is preserved.
         </div>
       )}
       <DockLayout panels={panels} />
@@ -622,9 +618,9 @@ export function App({
         <span>
           {tab
             ? `${tab.data.target.files.find((f) => f.path.raw_base64 === tab.path.raw_base64)!.newline.toUpperCase()} · UTF-8 · ${tab.data.target.files.find((f) => f.path.raw_base64 === tab.path.raw_base64)!.bytes.length} bytes`
-            : "Нет открытого файла"}
+            : "No open file"}
         </span>
-        <span>Git · Index отделён от отметок ревью</span>
+        <span>Git · Staging is independent of review marks</span>
       </footer>
     </main>
   );

@@ -61,3 +61,44 @@ describe("guarded Git workspace", () => {
     expect(w.state.gitJob?.id).toBe("j");
   });
 });
+it("does not enable the next Git operation before refreshing repository generation", async () => {
+  let refreshed!: () => void;
+  const w = new Workspace({
+    read: async () => {
+      throw Error("unused");
+    },
+    desktop: async () => ({
+      kind: "GitJob",
+      job: {
+        id: "j",
+        root: "/r",
+        status: "Succeeded",
+        error: null,
+        cancel_requested: false,
+        state_changed: true,
+        outcome_uncertain: false,
+      },
+    }),
+  });
+  w.state.root = "/r";
+  w.state.gitJob = {
+    id: "j",
+    root: "/r",
+    status: "Running",
+    error: null,
+    cancel_requested: false,
+    state_changed: false,
+    outcome_uncertain: false,
+  };
+  w.poll = async () => {
+    await new Promise<void>((r) => (refreshed = r));
+  };
+  w.refreshHistory = async () => {};
+  w.refreshRemotes = async () => {};
+  const pending = w.pollGit();
+  await Promise.resolve();
+  expect(w.state.gitJob?.status).toBe("Running");
+  refreshed();
+  await pending;
+  expect(w.state.gitJob?.status).toBe("Succeeded");
+});

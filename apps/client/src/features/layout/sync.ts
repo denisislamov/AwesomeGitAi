@@ -5,6 +5,7 @@ import type {
   Side,
   ReviewState,
   GitAction,
+  SourceLocation,
 } from "../../../../../packages/api/src/generated";
 import {
   sendPanelAction,
@@ -66,6 +67,41 @@ export async function dispatchPanelAction(
     return;
   const tab = w.active();
   switch (message.action) {
+    case "learning_mode":
+      if (["explanation", "trace", "diagram"].includes(p.mode))
+        w.setLearningMode(p.mode);
+      break;
+    case "learning_refresh":
+      await w.refreshLearning();
+      break;
+    case "learning_open":
+      if (typeof p.id === "string") await w.openLearning(p.id);
+      break;
+    case "learning_location":
+      if (
+        p.artifact === w.state.learningRecord?.item.id &&
+        object(p.location) &&
+        object(p.location.path) &&
+        Number.isSafeInteger(p.location.line)
+      )
+        await w.openLearningLocation(p.location as SourceLocation);
+      break;
+    case "trace_move":
+      if (
+        p.artifact === w.state.learningRecord?.item.id &&
+        p.step === w.state.traceStep &&
+        ["next", "over", "into", "out", "back", "restart"].includes(p.action)
+      )
+        await w.moveTrace(p.action);
+      break;
+    case "trace_frame":
+      if (
+        p.artifact === w.state.learningRecord?.item.id &&
+        p.step === w.state.traceStep &&
+        typeof p.id === "string"
+      )
+        await w.chooseTraceFrame(p.id);
+      break;
     case "git_cancel":
       if (p.id === w.state.gitJob?.id) await w.cancelGit();
       break;
@@ -355,6 +391,35 @@ export class DetachedWorkspace extends Workspace {
     await this.action("explain_detail", {
       id,
       comparisonId: this.active()?.data.comparison.id,
+    });
+  }
+  override setLearningMode(mode: Workspace["state"]["learningMode"]) {
+    void this.action("learning_mode", { mode });
+  }
+  override async refreshLearning() {
+    await this.action("learning_refresh");
+  }
+  override async openLearning(id: string) {
+    await this.action("learning_open", { id });
+  }
+  override async openLearningLocation(location: SourceLocation) {
+    await this.action("learning_location", {
+      location,
+      artifact: this.state.learningRecord?.item.id,
+    });
+  }
+  override async moveTrace(action: Parameters<Workspace["moveTrace"]>[0]) {
+    await this.action("trace_move", {
+      action,
+      step: this.state.traceStep,
+      artifact: this.state.learningRecord?.item.id,
+    });
+  }
+  override async chooseTraceFrame(id: string) {
+    await this.action("trace_frame", {
+      id,
+      step: this.state.traceStep,
+      artifact: this.state.learningRecord?.item.id,
     });
   }
   override async runGit(action: GitAction) {

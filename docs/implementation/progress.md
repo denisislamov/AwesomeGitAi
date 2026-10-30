@@ -59,4 +59,11 @@ Implementation `8d8f90e`: init/clone, branch create/switch, stage/unstage file/s
 
 Native acceptance exposed loss of Git index timestamps; independent review found completed jobs exhausting the active-job limit. Both reproduced RED→GREEN and corrected in the final fix commit. Final regression: Rust92 + UI34 + probe4 + native8; Playwright10, contracts/typecheck/macOS bundle pass. Packaged host IPC auth/stage/cancel/shutdown smoke passes. Final manual GUI cancellation/detach recheck awaits Mac unlock after it relocked during regression; do not treat that item as passed. No push/merge, T6 not started. Detailed behavior and limits: [T5 results](../architecture/t5-results.md).
 
-T5 final native acceptance closed after unlock: Cancel button stopped a running pre-commit hook, HEAD unchanged, no index.lock; Git panel detach/shared status/redock passed. T6 + English UI, then T7 now authorized for macOS; local commits only.
+T5 final native acceptance closed after unlock: Cancel button stopped a running pre-commit hook, HEAD unchanged, no index.lock; Git panel detach/shared status/redock passed. T6 + English UI, then the next task in the addendum (T3a) authorized for macOS; local commits only.
+
+
+## T6 — implemented; final native manual check pending
+
+English UI, recorded step explanations, typed variables/deltas, stack/frame navigation, watches and linked diagrams implemented through real MCP. Final review corrections and regression: Rust95 invocations + UI45 + probe4 + native8, all11 browser scenarios including100k graph. macOS bundle, typecheck/contracts pass. See [T6 results](../architecture/t6-results.md). The Mac relocked; final GUI keyboard/trace/detached-panel check remains pending, not marked passed. T5 manual cancellation was completed before the lock. Local commits only.
+
+T3a has started with isolated language-adapter probes; usage hints are not yet connected to the product. Correct task order from the plan addendum: T6 → T3a → T6a → T7.

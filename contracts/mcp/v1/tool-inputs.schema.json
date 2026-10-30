@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:awesomegitai:mcp:tool-inputs:v1",
-  "title": "AwesomeGitAi MCP input contracts v1 (design, server not yet implemented)",
+  "title": "AwesomeGitAi MCP input contracts v1",
   "oneOf": [
     {
       "type": "object",
@@ -13,10 +13,7 @@
           "$ref": "#/$defs/integration_guide"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -29,10 +26,7 @@
           "$ref": "#/$defs/context_get"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -45,10 +39,7 @@
           "$ref": "#/$defs/session_open"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -61,10 +52,7 @@
           "$ref": "#/$defs/snapshot_capture"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -77,10 +65,7 @@
           "$ref": "#/$defs/decision_record"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -93,10 +78,7 @@
           "$ref": "#/$defs/event_append"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -109,10 +91,7 @@
           "$ref": "#/$defs/evidence_record"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -125,10 +104,7 @@
           "$ref": "#/$defs/decision_supersede"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -141,10 +117,7 @@
           "$ref": "#/$defs/trace_record"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -157,10 +130,7 @@
           "$ref": "#/$defs/diagram_record"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     },
     {
@@ -173,10 +143,7 @@
           "$ref": "#/$defs/session_close"
         }
       },
-      "required": [
-        "tool",
-        "arguments"
-      ],
+      "required": ["tool", "arguments"],
       "additionalProperties": false
     }
   ],
@@ -198,10 +165,7 @@
         },
         "side": {
           "type": "string",
-          "enum": [
-            "old",
-            "new"
-          ]
+          "enum": ["old", "new"]
         },
         "start_line": {
           "type": "integer",
@@ -239,10 +203,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "description",
-        "reason_not_chosen"
-      ],
+      "required": ["description", "reason_not_chosen"],
       "additionalProperties": false
     },
     "decision": {
@@ -317,19 +278,10 @@
           "minLength": 1
         },
         "value": {
-          "type": [
-            "string",
-            "number",
-            "boolean",
-            "null"
-          ]
+          "type": ["string", "number", "boolean", "null"]
         }
       },
-      "required": [
-        "name",
-        "type",
-        "value"
-      ],
+      "required": ["name", "type", "value"],
       "additionalProperties": false
     },
     "frame": {
@@ -340,10 +292,7 @@
           "minLength": 1
         },
         "parent_id": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "function": {
           "type": "string",
@@ -359,13 +308,7 @@
           }
         }
       },
-      "required": [
-        "id",
-        "parent_id",
-        "function",
-        "location",
-        "locals"
-      ],
+      "required": ["id", "parent_id", "function", "location", "locals"],
       "additionalProperties": false
     },
     "step": {
@@ -377,11 +320,7 @@
         },
         "phase": {
           "type": "string",
-          "enum": [
-            "before_instruction",
-            "call_returned",
-            "completed"
-          ]
+          "enum": ["before_instruction", "call_returned", "completed"]
         },
         "location": {
           "$ref": "#/$defs/anchor"
@@ -397,36 +336,19 @@
           "minLength": 1
         },
         "next": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "over": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "into": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "out": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": ["string", "null"]
         },
         "result": {
-          "type": [
-            "string",
-            "number",
-            "boolean",
-            "null"
-          ]
+          "type": ["string", "number", "boolean", "null"]
         }
       },
       "required": [
@@ -458,11 +380,7 @@
           "$ref": "#/$defs/anchor"
         }
       },
-      "required": [
-        "id",
-        "label",
-        "anchor"
-      ],
+      "required": ["id", "label", "anchor"],
       "additionalProperties": false
     },
     "edge": {
@@ -482,18 +400,10 @@
         },
         "basis": {
           "type": "string",
-          "enum": [
-            "agent_inferred",
-            "agent_reported_observation"
-          ]
+          "enum": ["agent_inferred", "agent_reported_observation"]
         }
       },
-      "required": [
-        "from",
-        "to",
-        "label",
-        "basis"
-      ],
+      "required": ["from", "to", "label", "basis"],
       "additionalProperties": false
     },
     "integration_guide": {
@@ -503,9 +413,7 @@
           "const": 1
         }
       },
-      "required": [
-        "schema_version"
-      ],
+      "required": ["schema_version"],
       "additionalProperties": false
     },
     "context_get": {
@@ -695,12 +603,7 @@
         },
         "kind": {
           "type": "string",
-          "enum": [
-            "action",
-            "clarification",
-            "question",
-            "observation"
-          ]
+          "enum": ["action", "clarification", "question", "observation"]
         },
         "text": {
           "type": "string",
@@ -765,12 +668,7 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "passed",
-            "failed",
-            "not_run",
-            "inconclusive"
-          ]
+          "enum": ["passed", "failed", "not_run", "inconclusive"]
         },
         "environment": {
           "type": "string",
@@ -858,40 +756,8 @@
           "type": "string",
           "format": "uuid"
         },
-        "snapshot_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "label": {
-          "type": "string",
-          "minLength": 1
-        },
-        "kind": {
-          "const": "educational_simulation"
-        },
-        "inputs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/local"
-          }
-        },
-        "assumptions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/step"
-          },
-          "minItems": 1
-        },
-        "entry_step_id": {
-          "type": "string",
-          "minLength": 1
+        "trace": {
+          "$ref": "#/$defs/trace_scenario"
         }
       },
       "required": [
@@ -899,13 +765,7 @@
         "request_id",
         "idempotency_key",
         "session_id",
-        "snapshot_id",
-        "label",
-        "kind",
-        "inputs",
-        "assumptions",
-        "steps",
-        "entry_step_id"
+        "trace"
       ],
       "additionalProperties": false
     },
@@ -927,36 +787,8 @@
           "type": "string",
           "format": "uuid"
         },
-        "snapshot_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "label": {
-          "type": "string",
-          "minLength": 1
-        },
-        "kind": {
-          "type": "string",
-          "enum": [
-            "dependencies",
-            "pipeline"
-          ]
-        },
-        "nodes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/node"
-          },
-          "minItems": 1
-        },
-        "edges": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/edge"
-          }
-        },
-        "source": {
-          "const": "agent_reported"
+        "diagram": {
+          "$ref": "#/$defs/diagram"
         }
       },
       "required": [
@@ -964,12 +796,7 @@
         "request_id",
         "idempotency_key",
         "session_id",
-        "snapshot_id",
-        "label",
-        "kind",
-        "nodes",
-        "edges",
-        "source"
+        "diagram"
       ],
       "additionalProperties": false
     },
@@ -997,12 +824,7 @@
         },
         "outcome": {
           "type": "string",
-          "enum": [
-            "completed",
-            "partial",
-            "cancelled",
-            "failed"
-          ]
+          "enum": ["completed", "partial", "cancelled", "failed"]
         },
         "summary": {
           "type": "string",
@@ -1026,6 +848,330 @@
         "summary",
         "unresolved"
       ],
+      "additionalProperties": false
+    },
+    "learning_path": {
+      "type": "object",
+      "properties": {
+        "display": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "raw_base64": {
+          "type": "string",
+          "maxLength": 8192
+        },
+        "encoding": {
+          "const": "unix_bytes"
+        }
+      },
+      "required": ["display", "raw_base64", "encoding"],
+      "additionalProperties": false
+    },
+    "source_location": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/learning_path"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        }
+      },
+      "required": ["path", "line"],
+      "additionalProperties": false
+    },
+    "trace_value": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "type_name": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "known": {
+          "type": "boolean"
+        }
+      },
+      "required": ["name", "type_name", "value", "known"],
+      "additionalProperties": false
+    },
+    "trace_frame": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "location": {
+          "$ref": "#/$defs/source_location"
+        },
+        "locals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/trace_value"
+          },
+          "maxItems": 128
+        }
+      },
+      "required": ["id", "label", "location", "locals"],
+      "additionalProperties": false
+    },
+    "trace_step": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "phase": {
+          "enum": ["Before", "After", "Return", "Unknown"]
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source_location"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/trace_frame"
+          },
+          "maxItems": 32
+        },
+        "explanation": {
+          "type": "string",
+          "maxLength": 8192
+        },
+        "next": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "over": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "into": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "out": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "result": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/trace_value"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "phase",
+        "location",
+        "frames",
+        "explanation",
+        "next",
+        "over",
+        "into",
+        "out",
+        "result"
+      ],
+      "additionalProperties": false
+    },
+    "trace_scenario": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "inputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/trace_value"
+          },
+          "maxItems": 128
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "maxItems": 32
+        },
+        "entry_step": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/trace_step"
+          },
+          "maxItems": 1000
+        },
+        "final_values": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "$ref": "#/$defs/trace_value"
+          }
+        }
+      },
+      "required": [
+        "snapshot_id",
+        "title",
+        "inputs",
+        "assumptions",
+        "entry_step",
+        "steps",
+        "final_values"
+      ],
+      "additionalProperties": false
+    },
+    "diagram_node": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/source_location"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": ["id", "label", "location"],
+      "additionalProperties": false
+    },
+    "diagram_edge": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "from": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "to": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 512
+        },
+        "certainty": {
+          "enum": ["Reported", "Inferred", "Unknown"]
+        }
+      },
+      "required": ["id", "from", "to", "label", "certainty"],
+      "additionalProperties": false
+    },
+    "diagram": {
+      "type": "object",
+      "properties": {
+        "snapshot_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2048
+          },
+          "maxItems": 32
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagram_node"
+          },
+          "maxItems": 100
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagram_edge"
+          },
+          "maxItems": 300
+        }
+      },
+      "required": ["snapshot_id", "title", "assumptions", "nodes", "edges"],
       "additionalProperties": false
     }
   }

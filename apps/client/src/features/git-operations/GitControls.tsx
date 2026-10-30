@@ -14,34 +14,34 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
   const targetName = target || s.repo?.branch || "";
   return (
     <details className="git-controls">
-      <summary>Git-операции · staging, ветки, синхронизация</summary>
+      <summary>Git actions · staging, branches, sync</summary>
       <fieldset disabled={busy || !s.repo}>
-        <legend>Коммит</legend>
+        <legend>Commit</legend>
         <p>
           {s.repo?.status_entries.filter(
             (e) =>
               e.status[0] !== "." && e.status[0] !== " " && e.status[0] !== "?",
           ).length ?? 0}{" "}
-          файлов в Index. В коммит попадёт только Index.
+          files staged. Only the Index will be committed.
         </p>
         <textarea
-          aria-label="Сообщение коммита"
+          aria-label="Commit message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Что изменилось и зачем?"
+          placeholder="What changed and why?"
           rows={2}
         />
         <button
           disabled={!message.trim()}
           onClick={() => void w.runGit({ kind: "Commit", message })}
         >
-          Создать коммит
+          Create commit
         </button>
       </fieldset>
       <fieldset disabled={busy || !s.repo}>
-        <legend>Ветки</legend>
+        <legend>Branches</legend>
         <input
-          aria-label="Новая ветка"
+          aria-label="New branch"
           value={branch}
           onChange={(e) => setBranch(e.target.value)}
           placeholder="feature/name"
@@ -50,16 +50,16 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
           disabled={!branch}
           onClick={() => void w.runGit({ kind: "CreateBranch", name: branch })}
         >
-          Создать ветку
+          Create branch
         </button>
         <select
-          aria-label="Переключить ветку"
+          aria-label="Switch branch"
           value=""
           onChange={(e) =>
             void w.runGit({ kind: "SwitchBranch", name: e.target.value })
           }
         >
-          <option value="">Переключить на…</option>
+          <option value="">Switch to…</option>
           {s.branches
             .filter((b) => !b.remote)
             .map((b) => (
@@ -68,7 +68,7 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
         </select>
       </fieldset>
       <fieldset disabled={busy || !s.repo || !remoteName}>
-        <legend>Удалённый репозиторий</legend>
+        <legend>Remote repository</legend>
         <select
           aria-label="Git remote"
           value={remoteName}
@@ -79,7 +79,7 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
           ))}
         </select>
         <input
-          aria-label="Удалённая ветка"
+          aria-label="Remote branch"
           value={targetName}
           onChange={(e) => setTarget(e.target.value)}
           placeholder="main"
@@ -99,7 +99,7 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
             })
           }
         >
-          Pull · только fast-forward
+          Pull · fast-forward only
         </button>
         <button
           disabled={!targetName}
@@ -115,11 +115,11 @@ export function GitControls({ workspace: w }: { workspace: Workspace }) {
         </button>
       </fieldset>
       {s.repo && s.gitRemotes.length === 0 && (
-        <p>Remote не настроен. Его можно добавить в терминале.</p>
+        <p>No remote configured. Add one in your terminal.</p>
       )}
       <p className="hint">
-        Git использует ваши hooks, SSH, credential helper и подпись. Пароли в
-        приложении не сохраняются.
+        Git uses your hooks, SSH, credential helper, and signing settings.
+        Passwords are not stored by the application.
       </p>
     </details>
   );
@@ -133,35 +133,33 @@ export function GitJobStatus({ workspace: w }: { workspace: Workspace }) {
         {j.root.split("/").at(-1)} ·{" "}
         {(
           {
-            Running: "Git выполняется…",
-            Succeeded: "Git: готово",
-            Failed: "Git: ошибка",
-            Cancelled: "Запрошена отмена",
+            Running: "Git running…",
+            Succeeded: "Git: done",
+            Failed: "Git: failed",
+            Cancelled: "Cancelled",
           } as Record<string, string>
         )[j.status] ?? j.status}
       </span>
       {j.status === "Running" && (
-        <button onClick={() => void w.cancelGit()}>
-          Отменить Git-операцию
-        </button>
+        <button onClick={() => void w.cancelGit()}>Cancel Git operation</button>
       )}
       {j.error && <span>{j.error}</span>}
-      {j.state_changed && <span>Состояние репозитория изменилось.</span>}
+      {j.state_changed && <span>Repository state changed.</span>}
       {j.outcome_uncertain && (
         <strong>
-          Операция могла успеть изменить Git. Проверьте историю и remote перед
-          повтором.
+          The operation may have changed Git. Check history and the remote
+          before retrying.
         </strong>
       )}
       {j.error === "AUTH_INTERACTION_REQUIRED" && (
         <span>
-          Авторизуйтесь через Git credential helper / SSH в терминале и
-          повторите.
+          Authenticate with your Git credential helper / SSH in the terminal and
+          try again.
         </span>
       )}
       {j.status === "Succeeded" && j.root !== w.state.root && (
         <button onClick={() => void w.openRepository(j.root)}>
-          Открыть результат
+          Open result
         </button>
       )}
     </div>
@@ -171,23 +169,19 @@ export function GitPreview({ workspace: w }: { workspace: Workspace }) {
   const p = w.state.gitPreview;
   if (!p) return null;
   return (
-    <section
-      className="git-preview"
-      role="dialog"
-      aria-label="Предпросмотр Index"
-    >
-      <h3>Предпросмотр Index · {p.path}</h3>
+    <section className="git-preview" role="dialog" aria-label="Index preview">
+      <h3>Index preview · {p.path}</h3>
       <p>
-        Рабочий файл останется без изменений. Проверьте итог перед применением.
+        Your working file stays unchanged. Review the result before applying.
       </p>
       <div className="preview-columns">
         <div>
-          <strong>Текущий Index</strong>
-          <pre>{p.before || "(пусто)"}</pre>
+          <strong>Current Index</strong>
+          <pre>{p.before || "(empty)"}</pre>
         </div>
         <div>
-          <strong>После применения</strong>
-          <pre>{p.after || "(пусто)"}</pre>
+          <strong>After applying</strong>
+          <pre>{p.after || "(empty)"}</pre>
         </div>
       </div>
       <button
@@ -198,11 +192,9 @@ export function GitPreview({ workspace: w }: { workspace: Workspace }) {
         }
         onClick={() => void w.applyGitPreview()}
       >
-        Применить к Index
+        Apply to Index
       </button>
-      <button onClick={() => w.dismissGitPreview()}>
-        Закрыть предпросмотр
-      </button>
+      <button onClick={() => w.dismissGitPreview()}>Close preview</button>
     </section>
   );
 }

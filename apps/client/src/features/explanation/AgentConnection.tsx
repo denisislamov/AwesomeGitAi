@@ -24,59 +24,59 @@ export function AgentConnection({ root }: { root: string }) {
       await navigator.clipboard.writeText(text);
       setCopied(label);
     } catch {
-      setError("Не удалось скопировать текст");
+      setError("Could not copy text");
     }
   }
   return (
     <>
       <button disabled={!root} onClick={() => void load()}>
-        Подключить MCP
+        Connect MCP
       </button>
       {open && (
         <div
           className="agent-modal"
           role="dialog"
           aria-modal="true"
-          aria-label="Подключение агента"
+          aria-label="Agent connection"
         >
           <header>
-            <h2>Подключить агента</h2>
+            <h2>Connect an agent</h2>
             <button
-              aria-label="Закрыть подключение"
+              aria-label="Close connection"
               onClick={() => setOpen(false)}
             >
               ×
             </button>
           </header>
           <p>
-            Добавьте сервер в настройки MCP вашей IDE или harness. Приложение
-            должно оставаться открытым.
+            Add this server to your IDE or harness MCP settings. The application
+            must stay open.
           </p>
           {error && <p role="alert">{error}</p>}
-          {!data && !error && <p>Проверяем локальный host…</p>}
+          {!data && !error && <p>Checking the local host…</p>}
           {data && (
             <>
               <p role="status">
-                Локальный host отвечает. Формат ниже — generic mcpServers;
-                названия полей настроек зависят от клиента.
+                Local host is ready. The configuration below uses generic
+                mcpServers; setting names may vary between clients.
               </p>
               <pre>{JSON.stringify(data.config, null, 2)}</pre>
               <button
                 onClick={() =>
                   void copy(
                     JSON.stringify(data.config, null, 2),
-                    "Конфигурация скопирована",
+                    "Configuration copied",
                   )
                 }
               >
-                Скопировать конфигурацию
+                Copy configuration
               </button>
-              <h3>Инструкция агенту</h3>
+              <h3>Agent instructions</h3>
               <p>{data.guide}</p>
               <button
-                onClick={() => void copy(data.guide, "Инструкция скопирована")}
+                onClick={() => void copy(data.guide, "Instructions copied")}
               >
-                Скопировать инструкцию
+                Copy instructions
               </button>
               <details>
                 <summary>Streamable HTTP</summary>

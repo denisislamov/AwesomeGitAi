@@ -103,6 +103,29 @@ export function testHost() {
           );
           return;
         }
+        if (req.url === "/test-learning-change") {
+          writeFileSync(
+            join(repo, "Dash.cs"),
+            "// newer worktree, not the recorded scenario\n",
+          );
+          res.end("ok");
+          return;
+        }
+        if (req.url === "/test-learning-seed") {
+          try {
+            const output = execFileSync(
+              "python3",
+              [resolve("e2e/seed-learning.py"), join(dir, "profile"), repo],
+              { encoding: "utf8", timeout: 30000 },
+            );
+            res.setHeader("Content-Type", "application/json");
+            res.end(output);
+          } catch {
+            res.statusCode = 500;
+            res.end("LEARNING_FIXTURE_FAILED");
+          }
+          return;
+        }
         if (req.url === "/test-mcp-seed") {
           try {
             const output = execFileSync(

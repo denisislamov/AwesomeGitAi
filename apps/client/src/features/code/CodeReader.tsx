@@ -35,7 +35,7 @@ class ExplanationMarker extends GutterMarker {
     // CodeMirror gutters are aria-hidden; keyboard users use selection + Explain.
     b.tabIndex = -1;
     b.title = this.summary;
-    b.setAttribute("aria-label", `Объяснение: ${this.summary}`);
+    b.setAttribute("aria-label", `Explanation: ${this.summary}`);
     b.className = "code-explanation-marker";
     b.onclick = this.open;
     return b;
@@ -110,8 +110,7 @@ export function CodeReader({
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
       EditorView.contentAttributes.of({
-        "aria-label":
-          side === "Old" ? "Старая версия кода" : "Новая версия кода",
+        "aria-label": side === "Old" ? "Old code version" : "New code version",
         tabindex: "0",
       }),
       lineNumbers(),
@@ -232,6 +231,24 @@ export function CodeReader({
     };
   }, [tab.data, view, light, ignoreWhitespace]);
   useEffect(() => {
+    const selected = workspace.state.learningLocation;
+    const v = editor.current;
+    if (
+      !selected ||
+      !v ||
+      selected.snapshotId !== tab.data.target.id ||
+      selected.location.path.raw_base64 !== tab.path.raw_base64
+    )
+      return;
+    const line = v.state.doc.line(
+      Math.min(v.state.doc.lines, selected.location.line),
+    );
+    v.dispatch({
+      selection: { anchor: line.from, head: line.to },
+      effects: EditorView.scrollIntoView(line.from, { y: "center" }),
+    });
+  }, [workspace.state.learningLocation, tab.data, view]);
+  useEffect(() => {
     for (const { view: editor, side, compartment } of markerEditors.current) {
       const markers = new Map<number, { summary: string; end: number }>();
       for (const decision of workspace.state.explanations) {
@@ -253,7 +270,7 @@ export function CodeReader({
               ? resolution.Relocated.end_line
               : anchor.end_line;
           markers.set(start, {
-            summary: `${decision.summary}${resolution === "Exact" ? "" : " (перенесённая привязка)"}`,
+            summary: `${decision.summary}${resolution === "Exact" ? "" : " (relocated anchor)"}`,
             end,
           });
         }
@@ -285,8 +302,11 @@ export function CodeReader({
   if (file.state === "Conflicted" || old.state === "Conflicted")
     return (
       <div className="conflict">
-        <h3>Конфликт слияния</h3>
-        <p>Index содержит несколько версий. Разрешите конфликт в IDE.</p>
+        <h3>Merge conflict</h3>
+        <p>
+          The Index contains multiple versions. Resolve this conflict in your
+          IDE.
+        </p>
         {[...old.stages, ...file.stages].map((s, i) => (
           <details key={i}>
             <summary>
@@ -350,21 +370,21 @@ export function CodeReader({
                 );
               }}
             >
-              Выделенные строки → Index…
+              Selected lines → Index…
             </button>
-            <button onClick={prepareHunk}>Блок под курсором → Index…</button>
+            <button onClick={prepareHunk}>Hunk at cursor → Index…</button>
           </>
         )}
-        <span className="readonly">◉ Только чтение</span>
+        <span className="readonly">◉ Read only</span>
         <button
           onClick={() => editor.current && openSearchPanel(editor.current)}
         >
-          Поиск в коде ⌘F
+          Search code ⌘F
         </button>
         <label>
-          Строка{" "}
+          Line{" "}
           <input
-            aria-label="Перейти к строке"
+            aria-label="Go to line"
             type="number"
             min="1"
             value={line}
@@ -397,11 +417,11 @@ export function CodeReader({
             )
           }
         >
-          Объяснить выделение
+          Explain selection
         </button>
       </div>
       {file.state === "Absent" && (
-        <div className="deleted-label">Файл удалён</div>
+        <div className="deleted-label">File deleted</div>
       )}
       <div
         className={"editor-mount " + (!showDeleted ? "hide-deleted" : "")}

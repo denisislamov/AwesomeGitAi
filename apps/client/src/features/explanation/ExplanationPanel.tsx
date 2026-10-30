@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { Workspace } from "../../workspace";
 import type {
   AnchorResolution,
@@ -7,12 +7,12 @@ import type {
 import { coverage } from "./coverage";
 const label = (r: AnchorResolution) =>
   typeof r === "object"
-    ? "Привязка перенесена — проверьте контекст"
+    ? "Anchor relocated — check context"
     : {
-        Exact: "Точная версия",
-        Stale: "Код изменился",
-        Missing: "Фрагмент отсутствует",
-        Ambiguous: "Несколько совпадений",
+        Exact: "Exact version",
+        Stale: "Code changed",
+        Missing: "Fragment missing",
+        Ambiguous: "Multiple matches",
       }[r];
 export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
   const s = workspace.state,
@@ -24,6 +24,14 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
     () => (tab ? coverage(tab, s.explanations) : null),
     [tab, s.explanations],
   );
+  useEffect(() => {
+    if (!s.explanationOpen || s.explanationLayout !== "popover") return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") workspace.showExplanation(false);
+    };
+    window.addEventListener("keydown", dismiss);
+    return () => window.removeEventListener("keydown", dismiss);
+  }, [workspace, s.explanationOpen, s.explanationLayout]);
   if (!s.explanationOpen) return null;
   const visible = s.explanations.filter(
     (d) =>
@@ -40,70 +48,68 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
   );
   return (
     <aside
-      aria-label="Объяснение"
+      aria-label="Explanation"
       className={
         "explanation " + (s.explanationLayout === "popover" ? "popover" : "")
       }
     >
       <header>
-        <span>Объяснение</span>
+        <span>Explanation</span>
         <button
-          aria-label="Закрыть объяснение"
+          aria-label="Close explanation"
           onClick={() => workspace.showExplanation(false)}
         >
           ×
         </button>
       </header>
       <div className="explanation-body">
-        <span className="eyebrow">КОНТЕКСТ КОДА</span>
+        <span className="eyebrow">CODE CONTEXT</span>
         {tab?.stale && (
           <p role="status">
-            Снимок устарел. Рабочая копия изменилась; здесь остаётся прежняя
-            версия кода.
+            This snapshot is stale. The worktree changed; this is the previous
+            code version.
           </p>
         )}
         <h2>
           {visible.length
-            ? "Почему изменили код"
+            ? "Why the code changed"
             : selection
-              ? "Пока нет объяснения"
-              : "Выберите строки"}
+              ? "No explanation yet"
+              : "Select lines"}
         </h2>
         {!visible.length && (
           <p>
             {selection
-              ? "Для этого фрагмента агент ещё не передал объяснение. Наличие подсветки diff не означает, что решение проверено."
-              : "Выделите фрагмент кода и нажмите «Объяснить выделение»."}
+              ? "The agent has not explained this fragment yet. Diff highlighting does not mean a decision was verified."
+              : "Select code and choose Explain selection."}
           </p>
         )}
         {selection && (
           <div className="context-card" data-testid="explanation-target">
             <strong>{selection.path.display}</strong>
             <br />
-            {selection.side === "Old" ? "Старая" : "Новая"} сторона · строки{" "}
+            {selection.side === "Old" ? "Old" : "New"} side · lines{" "}
             {selection.startLine}–{selection.endLine}
             <br />
             <small>
-              Снимок {selection.snapshotId.slice(0, 8)}
+              Snapshot {selection.snapshotId.slice(0, 8)}
               <br />
-              Сравнение {selection.comparisonId.slice(0, 8)}
+              Comparison {selection.comparisonId.slice(0, 8)}
             </small>
           </div>
         )}
         {counts && (
           <p className="quiet-note">
-            Точно привязано объяснений: {counts.explained} из {counts.total}{" "}
-            изменённых строк (обе стороны). Это покрытие объяснениями, не
-            проверка корректности.
+            Exactly anchored explanations: {counts.explained} of {counts.total}{" "}
+            changed lines (both sides). This measures explanation coverage, not
+            correctness.
           </p>
         )}
         {s.explanationsError && (
-          <p role="alert">
-            Не удалось загрузить объяснения: {s.explanationsError}
-          </p>
+          <p role="alert">Could not load explanations: {s.explanationsError}</p>
         )}
         {s.explanationsTruncated && (
-          <p>Показаны последние 100 решений для файла.</p>
+          <p>Showing the latest 100 decisions for this file.</p>
         )}
         {visible.map((d) => (
           <DecisionCard key={d.id} d={d} workspace={workspace} />
@@ -111,7 +117,7 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
         {tab && (
           <div className="explanation-actions">
             <button onClick={() => void workspace.refreshExplanations()}>
-              Обновить объяснения
+              Refresh explanations
             </button>
             <button
               onClick={async () => {
@@ -122,18 +128,18 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
                   setCopied(true);
                   setCopyError("");
                 } catch {
-                  setCopyError("Не удалось скопировать запрос");
+                  setCopyError("Could not copy request");
                 }
               }}
             >
-              {copied ? "Запрос скопирован" : "Скопировать запрос агенту"}
+              {copied ? "Request copied" : "Copy agent request"}
             </button>
             {copyError && <p role="alert">{copyError}</p>}
           </div>
         )}
         <p className="quiet-note">
-          Объяснения и результаты проверок передаёт агент через MCP. Приложение
-          не приписывает автору неизвестные мотивы.
+          Explanations and check results are reported by the agent through MCP.
+          The application does not invent the author's motives.
         </p>
       </div>
     </aside>
@@ -154,31 +160,32 @@ function DecisionCard({
   return (
     <article className="context-card decision-card">
       <small>
-        Сообщено агентом · версия {d.revision}
-        {d.superseded_by ? " · заменено новым решением" : ""}
+        Agent reported · revision {d.revision}
+        {d.superseded_by ? " · superseded" : ""}
       </small>
       <h3>{d.summary}</h3>
       <p>{d.behavior}</p>
       <p>{d.rationale}</p>
       {d.anchors.map((v, i) => (
         <p className="quiet-note" key={i}>
-          {v.anchor.side === "Old" ? "До" : "После"} · строки{" "}
+          {v.anchor.side === "Old" ? "Before" : "After"} · lines{" "}
           {v.anchor.start_line}–{v.anchor.end_line} · {label(v.resolution)}
         </p>
       ))}
       {!exact && (
         <>
           <p>
-            Другая пара снимков. Подтверждение доступно в исходном сравнении.
+            Different snapshot pair. Review is available in the original
+            comparison.
           </p>
           <button onClick={() => void workspace.openDecision(d.id)}>
-            Открыть исходную версию
+            Open original version
           </button>
         </>
       )}
       <details>
-        <summary>Подробности и проверки</summary>
-        <h4>Ограничения</h4>
+        <summary>Details and checks</summary>
+        <h4>Constraints</h4>
         {d.constraints.length ? (
           <ul>
             {d.constraints.map((v, i) => (
@@ -186,9 +193,9 @@ function DecisionCard({
             ))}
           </ul>
         ) : (
-          <p>Не указаны.</p>
+          <p>Not specified.</p>
         )}
-        <h4>Рассмотренные варианты</h4>
+        <h4>Alternatives considered</h4>
         {d.alternatives.length ? (
           d.alternatives.map((v, i) => (
             <p key={i}>
@@ -198,9 +205,9 @@ function DecisionCard({
             </p>
           ))
         ) : (
-          <p>Агент не сообщил альтернативы.</p>
+          <p>The agent did not report alternatives.</p>
         )}
-        <h4>Проверки — со слов агента</h4>
+        <h4>Checks — agent reported</h4>
         {d.evidence.length ? (
           d.evidence.map((e, i) => (
             <p key={i}>
@@ -214,28 +221,28 @@ function DecisionCard({
             </p>
           ))
         ) : (
-          <p>Подтверждений нет.</p>
+          <p>No evidence provided.</p>
         )}
         {d.supersedes && (
           <p>
-            Заменяет решение {d.supersedes.slice(0, 8)}:{" "}
-            {d.supersede_reason || "Причина не указана"}
+            Supersedes decision {d.supersedes.slice(0, 8)}:{" "}
+            {d.supersede_reason || "Reason not specified"}
           </p>
         )}
         {d.superseded_by && (
           <button onClick={() => void workspace.openDecision(d.superseded_by!)}>
-            Открыть новую версию
+            Open newer version
           </button>
         )}
       </details>
       {d.review && (
         <p>
-          Ваша отметка:{" "}
+          Your review:{" "}
           {
             {
-              Viewed: "Просмотрено",
-              Accepted: "Принято",
-              Question: "Есть вопрос",
+              Viewed: "Viewed",
+              Accepted: "Accepted",
+              Question: "Question",
             }[d.review.state]
           }
           {d.review.note && ` — ${d.review.note}`}
@@ -244,7 +251,7 @@ function DecisionCard({
       {exact && !d.superseded_by && (
         <div className="human-review">
           <label>
-            Комментарий
+            Comment
             <input
               value={note}
               onChange={(e) => setNote(e.target.value)}
@@ -257,21 +264,21 @@ function DecisionCard({
                 void workspace.reviewDecision(d.id, "Viewed", note)
               }
             >
-              Просмотрено
+              Viewed
             </button>
             <button
               onClick={() =>
                 void workspace.reviewDecision(d.id, "Accepted", note)
               }
             >
-              Принято
+              Accepted
             </button>
             <button
               onClick={() =>
                 void workspace.reviewDecision(d.id, "Question", note)
               }
             >
-              Есть вопрос
+              Question
             </button>
           </div>
         </div>

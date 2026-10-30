@@ -1,0 +1,1242 @@
+{
+  "success": {
+    "snapshot_id": "11111111-1111-4111-8111-111111111111",
+    "title": "Dash: enough resource",
+    "inputs": [
+      {
+        "name": "resource",
+        "type_name": "float",
+        "value": "30",
+        "known": true
+      },
+      {
+        "name": "cost",
+        "type_name": "float",
+        "value": "20",
+        "known": true
+      },
+      {
+        "name": "input",
+        "type_name": "Vector2",
+        "value": "(1, 1)",
+        "known": true
+      },
+      {
+        "name": "grounded",
+        "type_name": "bool",
+        "value": "true",
+        "known": true
+      },
+      {
+        "name": "isDashing",
+        "type_name": "bool",
+        "value": "false",
+        "known": true
+      }
+    ],
+    "assumptions": [
+      "Agent-authored educational model, not observed execution.",
+      "Input (1, 1), cost 20, fixed 50 Hz tick rate. Floating point direction is rounded to eight decimal places."
+    ],
+    "entry_step": "0",
+    "steps": [
+      {
+        "id": "0",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 8
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 8
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "30",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Grounded is true, no dash is active and input is nonzero. These guards allow the attempt.",
+        "result": null,
+        "next": "1",
+        "over": "1",
+        "out": "10",
+        "into": null
+      },
+      {
+        "id": "1",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 10
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "30",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Call TrySpend with cost 20. No resource has been spent yet.",
+        "result": null,
+        "next": "2",
+        "over": "5",
+        "out": "10",
+        "into": "2"
+      },
+      {
+        "id": "2",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "ResourceWallet.cs",
+            "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+            "encoding": "unix_bytes"
+          },
+          "line": 8
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "30",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          },
+          {
+            "id": "wallet",
+            "label": "TrySpend",
+            "location": {
+              "path": {
+                "display": "ResourceWallet.cs",
+                "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+                "encoding": "unix_bytes"
+              },
+              "line": 8
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "30",
+                "known": true
+              },
+              {
+                "name": "cost",
+                "type_name": "float",
+                "value": "20",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Inside TrySpend: compare available resource with cost before changing it.",
+        "result": null,
+        "next": "3",
+        "over": "3",
+        "out": "5",
+        "into": null
+      },
+      {
+        "id": "3",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "ResourceWallet.cs",
+            "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+            "encoding": "unix_bytes"
+          },
+          "line": 10
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "30",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          },
+          {
+            "id": "wallet",
+            "label": "TrySpend",
+            "location": {
+              "path": {
+                "display": "ResourceWallet.cs",
+                "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "30",
+                "known": true
+              },
+              {
+                "name": "cost",
+                "type_name": "float",
+                "value": "20",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "There is enough resource. The subtraction on line 10 has not run yet.",
+        "result": null,
+        "next": "4",
+        "over": "4",
+        "out": "5",
+        "into": null
+      },
+      {
+        "id": "4",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "ResourceWallet.cs",
+            "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+            "encoding": "unix_bytes"
+          },
+          "line": 11
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          },
+          {
+            "id": "wallet",
+            "label": "TrySpend",
+            "location": {
+              "path": {
+                "display": "ResourceWallet.cs",
+                "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+                "encoding": "unix_bytes"
+              },
+              "line": 11
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "cost",
+                "type_name": "float",
+                "value": "20",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Line 10 spent 20; resource is now 10. Return true to the caller.",
+        "result": null,
+        "next": "5",
+        "over": "5",
+        "out": "5",
+        "into": null
+      },
+      {
+        "id": "5",
+        "phase": "Return",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 11
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 11
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "TrySpend returned true. The caller has not processed the condition yet.",
+        "result": {
+          "name": "return",
+          "type_name": "bool",
+          "value": "true",
+          "known": true
+        },
+        "next": "6",
+        "over": "6",
+        "out": "10",
+        "into": null
+      },
+      {
+        "id": "6",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 12
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 12
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "The successful result passed the condition. Normalize input (1, 1).",
+        "result": null,
+        "next": "7",
+        "over": "7",
+        "out": "10",
+        "into": null
+      },
+      {
+        "id": "7",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 13
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 13
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0.70710677, 0.70710677)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Direction is approximately (0.70710677, 0.70710677). Set duration to ten ticks.",
+        "result": null,
+        "next": "8",
+        "over": "8",
+        "out": "10",
+        "into": null
+      },
+      {
+        "id": "8",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 14
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 14
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0.70710677, 0.70710677)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "The duration is ten ticks. Activate the dash next.",
+        "result": null,
+        "next": "9",
+        "over": "9",
+        "out": "10",
+        "into": null
+      },
+      {
+        "id": "9",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 15
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 15
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0.70710677, 0.70710677)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "true",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "The dash is active. Return true.",
+        "result": null,
+        "next": "10",
+        "over": "10",
+        "out": "10",
+        "into": null
+      },
+      {
+        "id": "10",
+        "phase": "Return",
+        "location": null,
+        "frames": [],
+        "explanation": "Scenario complete. Final supplied state is retained below; no code was executed.",
+        "result": {
+          "name": "return",
+          "type_name": "bool",
+          "value": "true",
+          "known": true
+        },
+        "next": null,
+        "over": null,
+        "out": null,
+        "into": null
+      }
+    ],
+    "final_values": [
+      {
+        "name": "resource",
+        "type_name": "float",
+        "value": "10",
+        "known": true
+      },
+      {
+        "name": "direction",
+        "type_name": "Vector2",
+        "value": "(0.70710677, 0.70710677)",
+        "known": true
+      },
+      {
+        "name": "ticks",
+        "type_name": "int",
+        "value": "10",
+        "known": true
+      },
+      {
+        "name": "active",
+        "type_name": "bool",
+        "value": "true",
+        "known": true
+      }
+    ]
+  },
+  "failure": {
+    "snapshot_id": "11111111-1111-4111-8111-111111111111",
+    "title": "Dash: insufficient resource",
+    "inputs": [
+      {
+        "name": "resource",
+        "type_name": "float",
+        "value": "10",
+        "known": true
+      },
+      {
+        "name": "cost",
+        "type_name": "float",
+        "value": "20",
+        "known": true
+      },
+      {
+        "name": "input",
+        "type_name": "Vector2",
+        "value": "(1, 1)",
+        "known": true
+      },
+      {
+        "name": "grounded",
+        "type_name": "bool",
+        "value": "true",
+        "known": true
+      },
+      {
+        "name": "isDashing",
+        "type_name": "bool",
+        "value": "false",
+        "known": true
+      }
+    ],
+    "assumptions": [
+      "Agent-authored educational model, not observed execution.",
+      "Input (1, 1), cost 20, fixed 50 Hz tick rate. Floating point direction is rounded to eight decimal places."
+    ],
+    "entry_step": "0",
+    "steps": [
+      {
+        "id": "0",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 8
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 8
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Grounded is true, no dash is active and input is nonzero. These guards allow the attempt.",
+        "result": null,
+        "next": "1",
+        "over": "1",
+        "out": "6",
+        "into": null
+      },
+      {
+        "id": "1",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 10
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Call TrySpend with cost 20. No resource has been spent yet.",
+        "result": null,
+        "next": "2",
+        "over": "4",
+        "out": "6",
+        "into": "2"
+      },
+      {
+        "id": "2",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "ResourceWallet.cs",
+            "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+            "encoding": "unix_bytes"
+          },
+          "line": 8
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          },
+          {
+            "id": "wallet",
+            "label": "TrySpend",
+            "location": {
+              "path": {
+                "display": "ResourceWallet.cs",
+                "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+                "encoding": "unix_bytes"
+              },
+              "line": 8
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "cost",
+                "type_name": "float",
+                "value": "20",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Inside TrySpend: compare available resource with cost before changing it.",
+        "result": null,
+        "next": "3",
+        "over": "3",
+        "out": "4",
+        "into": null
+      },
+      {
+        "id": "3",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "ResourceWallet.cs",
+            "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+            "encoding": "unix_bytes"
+          },
+          "line": 9
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 10
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          },
+          {
+            "id": "wallet",
+            "label": "TrySpend",
+            "location": {
+              "path": {
+                "display": "ResourceWallet.cs",
+                "raw_base64": "UmVzb3VyY2VXYWxsZXQuY3M=",
+                "encoding": "unix_bytes"
+              },
+              "line": 9
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "cost",
+                "type_name": "float",
+                "value": "20",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "Resource 10 is below cost 20. Return false without spending anything.",
+        "result": null,
+        "next": "4",
+        "over": "4",
+        "out": "4",
+        "into": null
+      },
+      {
+        "id": "4",
+        "phase": "Return",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 11
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 11
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "TrySpend returned false. The caller has not processed the condition yet.",
+        "result": {
+          "name": "return",
+          "type_name": "bool",
+          "value": "false",
+          "known": true
+        },
+        "next": "5",
+        "over": "5",
+        "out": "6",
+        "into": null
+      },
+      {
+        "id": "5",
+        "phase": "Before",
+        "location": {
+          "path": {
+            "display": "Dash.cs",
+            "raw_base64": "RGFzaC5jcw==",
+            "encoding": "unix_bytes"
+          },
+          "line": 11
+        },
+        "frames": [
+          {
+            "id": "dash",
+            "label": "TryDash",
+            "location": {
+              "path": {
+                "display": "Dash.cs",
+                "raw_base64": "RGFzaC5jcw==",
+                "encoding": "unix_bytes"
+              },
+              "line": 11
+            },
+            "locals": [
+              {
+                "name": "resource",
+                "type_name": "float",
+                "value": "10",
+                "known": true
+              },
+              {
+                "name": "direction",
+                "type_name": "Vector2",
+                "value": "(0, 0)",
+                "known": true
+              },
+              {
+                "name": "ticks",
+                "type_name": "int",
+                "value": "0",
+                "known": true
+              },
+              {
+                "name": "active",
+                "type_name": "bool",
+                "value": "false",
+                "known": true
+              }
+            ]
+          }
+        ],
+        "explanation": "The caller now handles false and returns immediately; movement state remains unchanged.",
+        "result": null,
+        "next": "6",
+        "over": "6",
+        "out": "6",
+        "into": null
+      },
+      {
+        "id": "6",
+        "phase": "Return",
+        "location": null,
+        "frames": [],
+        "explanation": "Scenario complete. Final supplied state is retained below; no code was executed.",
+        "result": {
+          "name": "return",
+          "type_name": "bool",
+          "value": "false",
+          "known": true
+        },
+        "next": null,
+        "over": null,
+        "out": null,
+        "into": null
+      }
+    ],
+    "final_values": [
+      {
+        "name": "resource",
+        "type_name": "float",
+        "value": "10",
+        "known": true
+      },
+      {
+        "name": "direction",
+        "type_name": "Vector2",
+        "value": "(0, 0)",
+        "known": true
+      },
+      {
+        "name": "ticks",
+        "type_name": "int",
+        "value": "0",
+        "known": true
+      },
+      {
+        "name": "active",
+        "type_name": "bool",
+        "value": "false",
+        "known": true
+      }
+    ]
+  }
+}

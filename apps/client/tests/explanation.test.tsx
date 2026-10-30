@@ -65,11 +65,13 @@ it("human acceptance is absent for another pair and alternatives are not fabrica
   w.state.explanations = [{ ...decision, base_snapshot_id: "other" }];
   render(<ExplanationPanel workspace={w} />);
   expect(
-    screen.queryByRole("button", { name: "Принято", exact: true }),
+    screen.queryByRole("button", { name: "Accepted", exact: true }),
   ).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Открыть исходную версию" }),
+    screen.getByRole("button", { name: "Open original version" }),
   ).toBeTruthy();
-  expect(screen.getByText("Агент не сообщил альтернативы.")).toBeTruthy();
+  expect(
+    screen.getByText("The agent did not report alternatives."),
+  ).toBeTruthy();
   cleanup();
 });

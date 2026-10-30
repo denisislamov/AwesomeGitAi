@@ -201,7 +201,7 @@ impl ServerHandler for Gateway {
             .enable_resources()
             .enable_prompts()
             .build();
-        info.instructions=Some("AwesomeGitAi contract v1. Start with integration_guide (schema_version: 1), available to tools-only clients. Scope is granted locally; no Git mutations or human acceptance. trace_record and diagram_record are unavailable until T6.".into());
+        info.instructions=Some("AwesomeGitAi contract v1. Start with integration_guide (schema_version: 1), available to tools-only clients. Scope is granted locally; no Git mutations or human acceptance. trace_record and diagram_record attach agent-reported educational models to owned snapshots; they never execute code.".into());
         info
     }
     async fn list_tools(
@@ -218,6 +218,8 @@ impl ServerHandler for Gateway {
                 "session_open"=>"Open an agent explanation session against the expected repository generation; retain returned IDs and next_actions.",
                 "snapshot_capture"=>"Capture exact source content for this session and expected generation; use returned snapshot and comparison anchors.",
                 "decision_record"=>"Record agent-reported rationale, behavior, alternatives and exact snapshot anchors; cannot create human acceptance.",
+                "trace_record"=>"Record a snapshot-bound educational trace with explicit inputs, assumptions, stack, locals and step links. Not observed execution.",
+                "diagram_record"=>"Record a snapshot-bound diagram with typed nodes/edges and reported, inferred or unknown relationships.",
                 "event_append"=>"Append an agent-reported action, question, clarification or observation to the session.",
                 "evidence_record"=>"Record agent-reported check evidence; this never becomes independent runner evidence.",
                 "decision_supersede"=>"Replace a decision only at its expected revision, retaining the old decision and history.",

@@ -32,7 +32,7 @@ async fn tool(client: &Client, name: &str, mut args: Value, write: bool) -> Valu
 }
 async fn workflow(client: &Client, repo: &Path, bytes: &str) {
     let list = client.list_all_tools().await.unwrap();
-    assert_eq!(list.len(), 9);
+    assert_eq!(list.len(), 11);
     let guide = tool(client, "integration_guide", json!({}), false).await;
     let context = json!({"repo_id":guide["repo_id"],"worktree_id":guide["worktree_id"],"task":"SDK exact source scenario","paths":["a.cs"],"budget_chars":2000});
     let before = tool(client, "context_get", context.clone(), false).await;

@@ -18,6 +18,12 @@ impl HostService {
             return Err(AppError::new("SCOPE_DENIED"));
         }
         let response = match request {
+            DesktopRequest::LearningList { scope } => self.learning_list(scope)?,
+            DesktopRequest::LearningGet {
+                scope,
+                id,
+                artifact_kind,
+            } => self.learning_get(scope, id, artifact_kind)?,
             DesktopRequest::GitStart {
                 scope,
                 expected_generation,

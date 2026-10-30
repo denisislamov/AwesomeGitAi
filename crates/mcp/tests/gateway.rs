@@ -1,10 +1,10 @@
 #[test]
 fn only_implemented_tools_are_advertised() {
     let names = agai_mcp::tool_names();
-    assert_eq!(names.len(), 9);
+    assert_eq!(names.len(), 11);
     assert!(names.contains(&"integration_guide"));
-    assert!(!names.contains(&"trace_record"));
-    assert!(!names.contains(&"diagram_record"));
+    assert!(names.contains(&"trace_record"));
+    assert!(names.contains(&"diagram_record"));
 }
 
 #[test]

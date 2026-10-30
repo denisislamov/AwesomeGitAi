@@ -16,9 +16,9 @@ import {
 } from "./native";
 import "./layout.css";
 const titles: Record<PanelId, string> = {
-  files: "Файлы",
-  code: "Код",
-  explanation: "Объяснение",
+  files: "Files",
+  code: "Code",
+  explanation: "Explanation",
   git: "Git",
 };
 const key = "agai-layout-v1";
@@ -45,7 +45,7 @@ export function DockLayout({
     try {
       localStorage.setItem(key, JSON.stringify(layout));
     } catch {
-      setError("Не удалось сохранить расположение панелей.");
+      setError("Could not save panel layout.");
     }
   }, [layout]);
   useEffect(() => {
@@ -80,7 +80,7 @@ export function DockLayout({
       dispatch({ type: "detach", panel: p });
       setError("");
     } catch (e) {
-      setError(`Не удалось открыть окно: ${String(e)}`);
+      setError(`Could not open window: ${String(e)}`);
     } finally {
       setPending((v) => v.filter((x) => x !== p));
     }
@@ -130,7 +130,7 @@ export function DockLayout({
             className="dock-divider"
             role="separator"
             tabIndex={0}
-            aria-label="Размер панелей"
+            aria-label="Panel size"
             aria-orientation={
               n.axis === "horizontal" ? "vertical" : "horizontal"
             }
@@ -220,7 +220,7 @@ export function DockLayout({
         >
           <strong>{titles[p]}</strong>
           <details className="dock-menu">
-            <summary aria-label={`Разместить ${titles[p]}`}>⋮</summary>
+            <summary aria-label={`Place ${titles[p]}`}>⋮</summary>
             <div>
               {panelIds
                 .filter((t) => t !== p)
@@ -234,10 +234,10 @@ export function DockLayout({
                     >
                       {
                         {
-                          left: "Слева от",
-                          right: "Справа от",
-                          top: "Над",
-                          bottom: "Под",
+                          left: "Left of",
+                          right: "Right of",
+                          top: "Above",
+                          bottom: "Below",
                         }[edge]
                       }{" "}
                       «{titles[target]}»
@@ -249,13 +249,13 @@ export function DockLayout({
                   disabled={pending.includes(p)}
                   onClick={() => void detach(p)}
                 >
-                  В отдельное окно
+                  Detach window
                 </button>
               )}
             </div>
           </details>
           <button
-            aria-label={`Скрыть ${titles[p]}`}
+            aria-label={`Hide ${titles[p]}`}
             disabled={pending.includes(p)}
             onClick={() => dispatch({ type: "hide", panel: p })}
           >
@@ -270,7 +270,7 @@ export function DockLayout({
     <div className="dock-workspace">
       <div className="dock-toolbar">
         <details>
-          <summary>Панели</summary>
+          <summary>Panels</summary>
           <div className="dock-toolbar-menu">
             {panelIds.map((p) => (
               <button
@@ -279,21 +279,21 @@ export function DockLayout({
                 onClick={() => void show(p)}
               >
                 {titles[p]}
-                {layout.detached.includes(p) ? " — вернуть из окна" : ""}
+                {layout.detached.includes(p) ? " — return from window" : ""}
               </button>
             ))}
             <button disabled={pending.length > 0} onClick={() => void reset()}>
-              Сбросить расположение
+              Reset layout
             </button>
           </div>
         </details>
         {error && <span role="alert">{error}</span>}
-        <small>Перетащите заголовок к краю другой панели</small>
+        <small>Drag a title to the edge of another panel</small>
       </div>
       <div className="dock-root">
         {render(layout.tree) || (
           <button disabled={pending.length > 0} onClick={() => void reset()}>
-            Показать панели
+            Show panels
           </button>
         )}
       </div>

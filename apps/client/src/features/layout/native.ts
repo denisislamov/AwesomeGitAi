@@ -11,6 +11,12 @@ export const closePanel = (panel: PanelId) =>
   invoke<void>("close_panel", { panel });
 export const listPanels = () => invoke<PanelId[]>("list_panels");
 export type PanelActionName =
+  | "learning_mode"
+  | "learning_refresh"
+  | "learning_open"
+  | "learning_location"
+  | "trace_move"
+  | "trace_frame"
   | "git_action"
   | "git_prepare"
   | "git_apply"

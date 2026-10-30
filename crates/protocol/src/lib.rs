@@ -1,3 +1,4 @@
+mod trace;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -6,6 +7,7 @@ use std::{
     os::unix::ffi::{OsStrExt, OsStringExt},
     path::PathBuf,
 };
+pub use trace::*;
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -360,6 +362,14 @@ pub struct BranchRef {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum DesktopRequest {
+    LearningList {
+        scope: RepoScope,
+    },
+    LearningGet {
+        scope: RepoScope,
+        id: Uuid,
+        artifact_kind: String,
+    },
     GitStart {
         scope: RepoScope,
         expected_generation: String,
@@ -433,6 +443,12 @@ pub struct DesktopEnvelope {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind")]
 pub enum DesktopResponse {
+    LearningList {
+        items: Vec<LearningItem>,
+    },
+    LearningRecord {
+        record: LearningRecord,
+    },
     GitJob {
         job: GitJob,
     },

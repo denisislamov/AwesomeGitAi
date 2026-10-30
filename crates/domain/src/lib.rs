@@ -4,3 +4,5 @@ pub use anchors::resolve;
 pub use snapshot::{capture, capture_commit, compare};
 
 pub mod agent;
+
+pub mod trace;

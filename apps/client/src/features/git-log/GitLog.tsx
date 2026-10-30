@@ -87,30 +87,30 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
         <button
           disabled={s.historyBusy || !s.repo}
           onClick={() => void workspace.refreshHistory()}
-          title="Обновить refs и коммиты, сохранив открытый код"
+          title="Refresh refs and commits while preserving the open code"
         >
-          {s.historyStale ? "Обновить историю ●" : "Обновить историю"}
+          {s.historyStale ? "Refresh history ●" : "Refresh history"}
         </button>
         <input
-          aria-label="Поиск коммитов"
-          placeholder="Сообщение или hash…"
+          aria-label="Search commits"
+          placeholder="Message or hash…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <span>
-          {shown.length} загружено{s.cursor ? " · есть ещё" : ""}
+          {shown.length} loaded{s.cursor ? " · more available" : ""}
         </span>
         <button onClick={() => void workspace.more()} disabled={!s.cursor}>
-          Загрузить ещё
+          Load more
         </button>
       </div>
       <div className="git-body">
-        <nav className="branches" aria-label="Ветки">
+        <nav className="branches" aria-label="Branches">
           <button
             aria-pressed={s.branchFilter === "all"}
             onClick={() => workspace.filterBranch("all")}
           >
-            Все ветки
+            All branches
           </button>
           {[false, true].map((remote) => (
             <React.Fragment key={String(remote)}>
@@ -121,7 +121,7 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                   <button
                     key={b.name}
                     title={b.name}
-                    aria-label={`Ветка ${b.name}`}
+                    aria-label={`Branch ${b.name}`}
                     aria-pressed={s.branchFilter === b.name}
                     onClick={() => workspace.filterBranch(b.name)}
                   >
@@ -151,7 +151,7 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                   "commit-row " +
                   (s.selectedCommit === r.commit.oid ? "selected" : "")
                 }
-                aria-label={`Коммит ${r.commit.subject}`}
+                aria-label={`Commit ${r.commit.subject}`}
                 aria-pressed={s.selectedCommit === r.commit.oid}
                 style={{ top: (start + i) * 38 }}
                 onClick={() => workspace.selectCommit(r.commit.oid)}
@@ -215,7 +215,7 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
             ))}
           </div>
         </div>
-        <aside className="commit-details" aria-label="Сведения о коммите">
+        <aside className="commit-details" aria-label="Commit details">
           {details ? (
             <>
               <strong>{details.message}</strong>
@@ -227,21 +227,18 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
               <code title={details.oid}>{details.oid.slice(0, 12)}</code>
               <p>
                 <button onClick={() => setBase(details.oid)}>
-                  Взять за базу сравнения
+                  Use as comparison base
                 </button>
               </p>
               {base && (
                 <p>
-                  База: {base.slice(0, 8)}{" "}
-                  <button
-                    aria-label="Сбросить базу"
-                    onClick={() => setBase(null)}
-                  >
+                  Base: {base.slice(0, 8)}{" "}
+                  <button aria-label="Clear base" onClick={() => setBase(null)}>
                     ×
                   </button>
                 </p>
               )}
-              <h4>ИЗМЕНЁННЫЕ ФАЙЛЫ</h4>
+              <h4>CHANGED FILES</h4>
               {details.paths.map((p) => (
                 <button
                   key={p.raw_base64}
@@ -252,14 +249,14 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                 </button>
               ))}
               {details.paths.length === 0 && (
-                <p>Нет файлов для обычного diff; возможен merge-коммит.</p>
+                <p>No ordinary diff files; this may be a merge commit.</p>
               )}
-              <small>Выбор коммита не переключает ветку.</small>
+              <small>Selecting a commit does not switch branches.</small>
             </>
           ) : (
             <p>
               {err ||
-                "Выберите коммит для сведений и файлов. Открытый код останется на месте."}
+                "Select a commit to see details and files. Your open code stays in place."}
             </p>
           )}
         </aside>

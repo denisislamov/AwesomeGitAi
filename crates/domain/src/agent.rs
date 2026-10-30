@@ -15,6 +15,8 @@ const TOOLS: &[&str] = &[
     "evidence_record",
     "decision_supersede",
     "session_close",
+    "trace_record",
+    "diagram_record",
 ];
 fn err(code: &str) -> AppError {
     AppError::new(code)
@@ -294,7 +296,7 @@ pub fn agent_call(
     validate(tool, &args)?;
     if tool == "integration_guide" {
         return Ok(
-            json!({"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"tools":TOOLS,"workflow":["context_get(paths,budget_chars) pins pre-edit working-tree baseline and returns generation","session_open(expected_generation from context) before edits; retain session_id","edit selected paths, then context_get to obtain current generation","snapshot_capture using exactly session baseline paths; returns snapshot_id and comparison","decision_record with exact anchors/hash and alternatives; evidence_record states agent_reported checks","decision_supersede with expected_revision preserves prior explanation","session_close with final_snapshot_id and unresolved items"],"scope":"Only this repository/worktree and sessions owned by this grant. Project decisions in context are not automatically current.","provenance":"All writes are agent_reported. Human acceptance and runner-observed evidence are unavailable.","retry":"Reuse idempotency_key and identical semantic input after unknown acknowledgement; request_id may change. A new operation needs a new key.","anchor_hash":"SHA256 of exact UTF-8 bytes for inclusive lines, preserving LF/CRLF and final newline. Old anchors use comparison.base_snapshot_id, new anchors use target_snapshot_id.","example":{"tool":"context_get","arguments":{"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"task":"explain changes","paths":["src/example.cs"],"budget_chars":8000}},"limitations":["No Git mutations","No human acceptance","trace_record and diagram_record unavailable","Context capture writes immutable snapshots; excluded files cannot become decision anchors"]}),
+            json!({"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"tools":TOOLS,"workflow":["context_get(paths,budget_chars) pins pre-edit working-tree baseline and returns generation","session_open(expected_generation from context) before edits; retain session_id","edit selected paths, then context_get to obtain current generation","snapshot_capture using exactly session baseline paths; returns snapshot_id and comparison","decision_record with exact anchors/hash and alternatives; evidence_record states agent_reported checks","decision_supersede with expected_revision preserves prior explanation","trace_record(session_id,trace) and diagram_record(session_id,diagram) attach validated educational models to a captured session snapshot; use schema-defined source locations and explicit assumptions","session_close with final_snapshot_id and unresolved items"],"scope":"Only this repository/worktree and sessions owned by this grant. Project decisions in context are not automatically current.","provenance":"All writes are agent_reported. Human acceptance and runner-observed evidence are unavailable.","retry":"Reuse idempotency_key and identical semantic input after unknown acknowledgement; request_id may change. A new operation needs a new key.","anchor_hash":"SHA256 of exact UTF-8 bytes for inclusive lines, preserving LF/CRLF and final newline. Old anchors use comparison.base_snapshot_id, new anchors use target_snapshot_id.","example":{"tool":"context_get","arguments":{"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"task":"explain changes","paths":["src/example.cs"],"budget_chars":8000}},"limitations":["No Git mutations","No human acceptance","Trace/diagram data is agent-reported educational material, never observed execution","Context capture writes immutable snapshots; excluded files cannot become decision anchors"]}),
         );
     }
     if tool == "context_get" {
@@ -385,6 +387,34 @@ pub fn agent_call(
             );
             changes.push(change("agent_snapshot", doc, r, 0));
             json!({"snapshot_id":captured.worktree_snapshot_id,"snapshots":captured,"comparison":comparison,"source":"agent_reported","baseline":"pre-session working tree, including pre-existing human edits"})
+        }
+        "trace_record" | "diagram_record" => {
+            let kind = if tool == "trace_record" {
+                "trace"
+            } else {
+                "diagram"
+            };
+            let payload = &args[kind];
+            let session = session.as_ref().ok_or_else(|| err("SCOPE_DENIED"))?;
+            snapshot_owned(store, r, grant, session, &payload["snapshot_id"])?;
+            let snapshot = store.snapshot(uid(&payload["snapshot_id"])?)?;
+            if kind == "trace" {
+                let t: TraceScenario = serde_json::from_value(payload.clone())
+                    .map_err(|_| err("INVALID_LEARNING_ARTIFACT"))?;
+                crate::trace::validate_trace(&t, &snapshot)?;
+            } else {
+                let d: Diagram = serde_json::from_value(payload.clone())
+                    .map_err(|_| err("INVALID_LEARNING_ARTIFACT"))?;
+                crate::trace::validate_diagram(&d, &snapshot)?;
+            }
+            let doc = new_doc(
+                r,
+                grant,
+                id,
+                json!({"session_id":session["id"],"snapshot_id":payload["snapshot_id"],"title":payload["title"],"artifact":payload,"source":"agent_reported"}),
+            );
+            changes.push(change(kind, doc, r, 0));
+            json!({"artifact_id":id,"snapshot_id":payload["snapshot_id"],"source":"agent_reported"})
         }
         "decision_record" | "decision_supersede" => {
             let session = session.as_ref().unwrap();

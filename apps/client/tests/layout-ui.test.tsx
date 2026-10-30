@@ -46,10 +46,10 @@ describe("Dock UI", () => {
   });
   it("closes and shows a panel", () => {
     render(<DockLayout panels={panels} />);
-    fireEvent.click(screen.getByRole("button", { name: "Скрыть Код" }));
+    fireEvent.click(screen.getByRole("button", { name: "Hide Code" }));
     expect(screen.queryByText("code content")).toBeNull();
-    fireEvent.click(screen.getByText("Панели"));
-    fireEvent.click(screen.getByRole("button", { name: "Код", exact: true }));
+    fireEvent.click(screen.getByText("Panels"));
+    fireEvent.click(screen.getByRole("button", { name: "Code", exact: true }));
     expect(screen.getByText("code content")).toBeTruthy();
   });
   it("keeps panel docked until native creation succeeds and retains it on failure", async () => {
@@ -60,10 +60,10 @@ describe("Dock UI", () => {
       }),
     );
     render(<DockLayout panels={panels} native />);
-    fireEvent.click(screen.getByLabelText("Разместить Код"));
+    fireEvent.click(screen.getByLabelText("Place Code"));
     fireEvent.click(
-      within(screen.getByRole("region", { name: "Код" })).getByRole("button", {
-        name: "В отдельное окно",
+      within(screen.getByRole("region", { name: "Code" })).getByRole("button", {
+        name: "Detach window",
       }),
     );
     expect(screen.getByText("code content")).toBeTruthy();
@@ -77,10 +77,10 @@ describe("Dock UI", () => {
     native.openPanel.mockResolvedValue(undefined);
     native.listPanels.mockResolvedValue([]);
     render(<DockLayout panels={panels} native />);
-    fireEvent.click(screen.getByLabelText("Разместить Код"));
+    fireEvent.click(screen.getByLabelText("Place Code"));
     fireEvent.click(
-      within(screen.getByRole("region", { name: "Код" })).getByRole("button", {
-        name: "В отдельное окно",
+      within(screen.getByRole("region", { name: "Code" })).getByRole("button", {
+        name: "Detach window",
       }),
     );
     await waitFor(() => expect(screen.queryByText("code content")).toBeNull());

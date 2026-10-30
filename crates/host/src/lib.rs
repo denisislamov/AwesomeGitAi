@@ -1,6 +1,7 @@
 mod agent;
 pub mod desktop;
 mod git_jobs;
+mod learning;
 pub mod local_ipc;
 pub mod watch;
 use agai_protocol::*;

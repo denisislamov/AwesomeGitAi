@@ -261,3 +261,54 @@ fn closed_session_allows_exact_retry_but_rejects_new_write() {
         "SESSION_CLOSED"
     );
 }
+#[test]
+fn learning_artifacts_are_owned_snapshot_bound_and_idempotent() {
+    let mut f = Fixture::new();
+    let session = f.session();
+    let capture = f.capture(&session);
+    let data: Value =
+        serde_json::from_str(include_str!("../../../packages/fixtures/trace-v1.json")).unwrap();
+    let mut trace = data["success"].clone();
+    trace["snapshot_id"] = capture["snapshot_id"].clone();
+    let location = json!({"path":RepoPath::from_bytes(b"a.cs").unwrap(),"line":1});
+    for s in trace["steps"].as_array_mut().unwrap() {
+        if !s["location"].is_null() {
+            s["location"] = location.clone();
+        }
+        for frame in s["frames"].as_array_mut().unwrap() {
+            frame["location"] = location.clone();
+        }
+    }
+    let args = write(json!({"session_id":session["session_id"],"trace":trace}));
+    let result = f.call("trace_record", args.clone()).unwrap();
+    assert_eq!(f.call("trace_record", args.clone()).unwrap(), result);
+    assert_eq!(
+        f.store
+            .docs("trace", f.reader.repo_id, f.reader.worktree_id)
+            .unwrap()
+            .len(),
+        1
+    );
+    let grant = f.grant;
+    f.grant = Uuid::new_v4();
+    assert_eq!(
+        f.call("trace_record", args.clone()).unwrap_err().code,
+        "SCOPE_DENIED"
+    );
+    f.grant = grant;
+    let mut bad = args.clone();
+    bad["idempotency_key"] = json!(Uuid::new_v4());
+    bad["trace"]["snapshot_id"] = session["baseline_snapshot_id"].clone();
+    assert_eq!(
+        f.call("trace_record", bad).unwrap_err().code,
+        "SCOPE_DENIED"
+    );
+    let diagram = json!({"snapshot_id":capture["snapshot_id"],"title":"Caller graph","assumptions":["Agent inferred"],"nodes":[{"id":"a","label":"Caller","location":location}],"edges":[]});
+    let result = f
+        .call(
+            "diagram_record",
+            write(json!({"session_id":session["session_id"],"diagram":diagram})),
+        )
+        .unwrap();
+    assert!(result["artifact_id"].is_string());
+}
