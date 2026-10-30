@@ -28,10 +28,7 @@ fn profile_rejects_symlink() {
 #[test]
 fn remote_principal_cannot_use_local_read() {
     let d = tempfile::tempdir().unwrap();
-    let mut service = HostService {
-        operations: Default::default(),
-        store: agai_storage::Store::open(&d.path().join("db")).unwrap(),
-    };
+    let mut service = HostService::new(agai_storage::Store::open(&d.path().join("db")).unwrap());
     assert_eq!(
         service
             .read(
@@ -61,10 +58,7 @@ fn real_socket_enforces_version_and_response_framing() {
     let db = d.path().join("db");
     let (mut client, mut server) = UnixStream::pair().unwrap();
     let worker = std::thread::spawn(move || {
-        let mut service = HostService {
-            operations: Default::default(),
-            store: agai_storage::Store::open(&db).unwrap(),
-        };
+        let mut service = HostService::new(agai_storage::Store::open(&db).unwrap());
         agai_host::handle(&mut service, &mut server).unwrap();
     });
     let request = ReadEnvelope {
@@ -138,10 +132,7 @@ fn registered_repo_scope_and_capture_work_end_to_end() {
             .success()
     );
     std::fs::write(repo.join("code.cs"), "class C {}\n").unwrap();
-    let mut service = HostService {
-        operations: Default::default(),
-        store: agai_storage::Store::open(&d.path().join("db")).unwrap(),
-    };
+    let mut service = HostService::new(agai_storage::Store::open(&d.path().join("db")).unwrap());
     let state = service.register_repository(&repo).unwrap();
     let captured = service
         .capture(

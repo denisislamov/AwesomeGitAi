@@ -42,13 +42,16 @@ impl HostService {
             .doc("agent_grant", &hash(call.token.as_bytes()))?
             .ok_or_else(|| AppError::new("SCOPE_DENIED"))?;
         let reader = self.reader(id(&grant, "repo_id")?, id(&grant, "worktree_id")?)?;
-        agai_domain::agent::agent_call(
+        self.attach_history(&reader)?;
+        let result = agai_domain::agent::agent_call(
             &mut self.store,
             &reader,
             id(&grant, "id")?,
             &call.tool,
             call.arguments,
-        )
+        );
+        self.attach_history(&reader)?;
+        result
     }
     pub fn decisions(
         &self,

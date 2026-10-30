@@ -102,6 +102,15 @@ impl HistoryImage {
     }
 }
 impl Store {
+    pub fn history_revision(&self) -> Result<(u64, i64)> {
+        Ok((
+            self.connection.total_changes(),
+            self.connection
+                .query_row("PRAGMA data_version", [], |r| r.get(0))
+                .map_err(err)?,
+        ))
+    }
+
     pub fn history_image(&self, repo: Uuid, wt: Uuid) -> Result<HistoryImage> {
         let mut tables = BTreeMap::new();
         for (name, cols, filter) in TABLES {

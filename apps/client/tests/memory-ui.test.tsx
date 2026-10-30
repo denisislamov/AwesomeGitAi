@@ -31,6 +31,7 @@ function setup() {
               },
             ],
             next_offset: null,
+            history_path: "/project.history",
           }
         : r.kind === "MemoryCatalog"
           ? {
@@ -479,4 +480,18 @@ it("labels limited catalogs and explains oversized preview errors", async () => 
   await screen.findByText(
     "Selection is too large to preview. Choose fewer records or snapshots.",
   );
+});
+
+it("reveals sibling history location on demand and explains history erasure", async () => {
+  setup();
+  const summary = await screen.findByText("Local Git history");
+  expect(summary.closest("details")?.open).toBe(false);
+  fireEvent.click(summary);
+  expect(screen.getByText("/project.history")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Erase" }));
+  expect(
+    screen.getByText(
+      /All commits in the sibling history repository will be permanently removed/,
+    ),
+  ).toBeTruthy();
 });

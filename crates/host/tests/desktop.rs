@@ -15,10 +15,7 @@ fn rpc(db: &Path, action: Value) -> Value {
     let (mut c, mut s) = UnixStream::pair().unwrap();
     let db = db.to_owned();
     let task = std::thread::spawn(move || {
-        let mut host = agai_host::HostService {
-            operations: Default::default(),
-            store: agai_storage::Store::open(&db).unwrap(),
-        };
+        let mut host = agai_host::HostService::new(agai_storage::Store::open(&db).unwrap());
         agai_host::handle(&mut host, &mut s).unwrap();
     });
     let wire = json!({"meta":{"schema_version":1,"request_id":uuid::Uuid::new_v4(),"idempotency_key":null},"desktop":action});

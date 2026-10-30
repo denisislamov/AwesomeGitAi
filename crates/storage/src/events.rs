@@ -139,7 +139,7 @@ impl Store {
 impl Store {
     pub fn register_repository(&self, repo: Uuid, worktree: Uuid, path: &[u8]) -> Result<()> {
         self.connection.execute_batch("CREATE TABLE IF NOT EXISTS repositories(repo_id TEXT NOT NULL,worktree_id TEXT PRIMARY KEY NOT NULL,path BLOB NOT NULL);").map_err(db_error)?;
-        self.connection.execute("INSERT INTO repositories VALUES(?1,?2,?3) ON CONFLICT(worktree_id) DO UPDATE SET path=excluded.path WHERE repo_id=excluded.repo_id",params![repo.to_string(),worktree.to_string(),path]).map_err(db_error)?;
+        self.connection.execute("INSERT INTO repositories VALUES(?1,?2,?3) ON CONFLICT(worktree_id) DO UPDATE SET path=excluded.path WHERE repo_id=excluded.repo_id AND path!=excluded.path",params![repo.to_string(),worktree.to_string(),path]).map_err(db_error)?;
         Ok(())
     }
     pub fn repository_path(&self, repo: Uuid, worktree: Uuid) -> Result<Vec<u8>> {

@@ -22,7 +22,11 @@ type Catalog = {
   records: Item[];
   snapshots: { id: string; label: string; file_count: number }[];
 };
-type Search = { items: Item[]; next_offset: number | null };
+type Search = {
+  items: Item[];
+  next_offset: number | null;
+  history_path?: string;
+};
 type Preview = { hash: string; preview: unknown; [key: string]: unknown };
 const text = (value: unknown): string =>
   value == null
@@ -181,6 +185,7 @@ function MemoryContent({
           setResults((previous) => ({
             items: offset ? [...previous.items, ...data.items] : data.items,
             next_offset: data.next_offset,
+            history_path: data.history_path,
           })),
       );
   };
@@ -219,6 +224,18 @@ function MemoryContent({
         <br />
         <small>Current repository / worktree · {scope.worktree_id}</small>
       </p>
+      {results.history_path && (
+        <details>
+          <summary>Local Git history</summary>
+          <p>
+            <code>{results.history_path}</code>
+          </p>
+          <p>
+            Private sibling repository. Checkpoints are automatic; nothing is
+            pushed. Move this folder together with the code project.
+          </p>
+        </details>
+      )}
       <div className="segmented" aria-label="Memory actions">
         {["Search", "Export", "Import", "Erase"].map((value) => (
           <button
@@ -534,9 +551,10 @@ function MemoryContent({
         <>
           <p>
             Irreversibly erase all local stored context for this repository and
-            worktree, including records, snapshots and derived data. Git files
-            and refs are unaffected. Agent access grants are revoked. Previously
-            exported copies are unaffected.
+            worktree, including records, snapshots and derived data. All commits
+            in the sibling history repository will be permanently removed. Code
+            repository files and refs are unaffected. Agent access grants are
+            revoked. Previously exported copies are unaffected.
           </p>
           <label>
             Erase confirmation

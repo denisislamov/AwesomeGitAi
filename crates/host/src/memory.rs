@@ -88,14 +88,15 @@ impl HostService {
         filter: memory::MemoryFilter,
     ) -> Result<DesktopResponse> {
         self.reader(scope.repo_id, scope.worktree_id)?;
-        Ok(DesktopResponse::MemoryResult {
-            data: value(memory::search(
-                &self.store,
-                scope.repo_id,
-                scope.worktree_id,
-                &filter,
-            )?)?,
-        })
+        let mut data = value(memory::search(
+            &self.store,
+            scope.repo_id,
+            scope.worktree_id,
+            &filter,
+        )?)?;
+        let reader = self.reader(scope.repo_id, scope.worktree_id)?;
+        data["history_path"] = json!(crate::history::location(&reader.root)?);
+        Ok(DesktopResponse::MemoryResult { data })
     }
     pub fn memory_catalog(&self, scope: RepoScope) -> Result<DesktopResponse> {
         self.reader(scope.repo_id, scope.worktree_id)?;

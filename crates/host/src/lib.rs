@@ -1,6 +1,7 @@
 mod agent;
 pub mod desktop;
 mod git_jobs;
+mod history;
 mod learning;
 pub mod local_ipc;
 mod memory;
@@ -60,19 +61,30 @@ impl Profile {
 }
 use std::os::unix::fs::DirBuilderExt;
 pub struct HostService {
+    histories:
+        std::cell::RefCell<std::collections::BTreeMap<(uuid::Uuid, uuid::Uuid), history::Cache>>,
     pub store: Store,
     pub operations: git_jobs::Operations,
 }
 impl HostService {
     pub fn new(store: Store) -> Self {
         Self {
+            histories: Default::default(),
             store,
             operations: Default::default(),
         }
     }
     pub fn register_repository(&self, path: &Path) -> Result<RepoState> {
         use std::os::unix::ffi::OsStrExt;
-        let r = agai_git::GitReader::new(path)?;
+        let r = self.history_reader(path)?;
+        if let Ok(previous) = self.store.repository_path(r.repo_id, r.worktree_id) {
+            use std::os::unix::ffi::OsStringExt;
+            let previous = PathBuf::from(std::ffi::OsString::from_vec(previous));
+            if previous != r.root && std::fs::symlink_metadata(&previous).is_ok() {
+                return Err(AppError::new("HISTORY_IDENTITY_IN_USE"));
+            }
+        }
+        self.attach_history(&r)?;
         self.store
             .register_repository(r.repo_id, r.worktree_id, r.root.as_os_str().as_bytes())?;
         r.state()
@@ -80,7 +92,7 @@ impl HostService {
     pub fn reader(&self, repo: uuid::Uuid, worktree: uuid::Uuid) -> Result<agai_git::GitReader> {
         use std::os::unix::ffi::OsStringExt;
         let path = std::ffi::OsString::from_vec(self.store.repository_path(repo, worktree)?);
-        let r = agai_git::GitReader::new(Path::new(&path))?;
+        let r = self.history_reader(Path::new(&path))?;
         if r.repo_id != repo || r.worktree_id != worktree {
             return Err(AppError::new("SCOPE_DENIED"));
         }

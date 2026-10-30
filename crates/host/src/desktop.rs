@@ -17,6 +17,23 @@ impl HostService {
         if !matches!(principal, Principal::LocalUser) {
             return Err(AppError::new("SCOPE_DENIED"));
         }
+        let scope = serde_json::to_value(&request)
+            .map_err(|_| AppError::new("INVALID_REQUEST"))?
+            .get("scope")
+            .cloned()
+            .map(serde_json::from_value::<RepoScope>)
+            .transpose()
+            .map_err(|_| AppError::new("INVALID_REQUEST"))?;
+        if let Some(scope) = &scope {
+            self.sync_history(scope)?;
+        }
+        let result = self.desktop_inner(request);
+        if let Some(scope) = &scope {
+            self.sync_history(scope)?;
+        }
+        result
+    }
+    fn desktop_inner(&mut self, request: DesktopRequest) -> Result<DesktopResponse> {
         let response = match request {
             DesktopRequest::MemorySearch {
                 scope,
