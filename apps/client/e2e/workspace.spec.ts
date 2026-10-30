@@ -582,6 +582,7 @@ test("language help is optional, snapshot-bound and keyboard accessible on both 
     for (let i = 0; i < 7; i++) await page.keyboard.press("ArrowRight");
     await page.keyboard.press("Meta+Shift+k");
     await expect(dialog).toContainText("sealed class");
+    await expect(dialog).toHaveCSS("background-color", "rgb(40, 40, 40)");
     await expect(dialog).toContainText(`Code.cs · ${side} · Snapshot`);
     await expect(dialog).toContainText("Unknown — language syntax");
     await dialog.getByRole("button", { name: "Example", exact: true }).click();

@@ -85,3 +85,5 @@ T3a native follow-up: main/detached usage navigation, Back, redock, explanation 
 ## T6a — implementation complete; native manual acceptance pending
 
 Added optional language reference in Code actions/context menu and Cmd+Shift+K. Bounded versioned catalog: C# sealed class/override, TS interface, Python synchronous yield/yield from. Meaning/example/source/context remain separate from unknown author intent and AI review. Fresh review found focus-only diff-side and C# raw-string false positives; both reproduced and corrected. UI78, Rust103, probe4, native8, contract/typecheck, browser13 and narrow-pointer rerun pass; macOS bundle built. Mac relocked before final T6a native help/detached check, so that item remains open. [Results and limits](../architecture/t6a-results.md). Local commits only.
+
+T6a native follow-up passed after unlock: keyboard help, examples/source, Escape focus, detached Code action and Quit. Corrected transparent dialog background with observed RED→GREEN style regression and rebuilt native visual verification. T6a closed; T7 in progress.

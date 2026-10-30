@@ -1,6 +1,6 @@
 # T6a — optional language construct reference
 
-2026-10-30. macOS scope. Native acceptance pending final bundle check.
+2026-10-30. macOS scope. Native macOS acceptance complete.
 
 ## Behavior
 
@@ -18,4 +18,4 @@ The catalog is intentionally bounded. Async Python generators are unsupported ra
 
 Resolver and dialog tests observed RED→GREEN. Fresh independent read-only review found two important issues: focusing a diff side without moving its caret could retain the other side, and C# raw strings could produce false keyword matches. Both reproduced in tests and were fixed; focus tracks the active editor, dialog closure restores its source side, and raw-string sources fail closed.
 
-Final regression: 103 Rust test invocations, four editor probes, eight native tests; contracts/typecheck pass. Final client suite: 78 tests. Browser: 13 functional scenarios pass, including real MCP explanations/trace, semantic relations, both diff sides and focus-only navigation; the 100k-history benchmark was skipped in this run (already passed at T3a). macOS bundle builds, 382.10 MiB. Final native manual help acceptance awaits unlock; the Mac relocked after the completed T3a check. Local evidence under `.superpowers/t6a-*`; no push or merge.
+Final regression: 103 Rust test invocations, four editor probes, eight native tests; contracts/typecheck pass. Final client suite: 78 tests. Browser: 13 functional scenarios pass, including real MCP explanations/trace, semantic relations, both diff sides and focus-only navigation; the 100k-history benchmark was skipped in this run (already passed at T3a). macOS bundle builds, 382.10 MiB. Native follow-up passed: Cmd+Shift+K opens the correct sealed-class card; examples and version/source details expand; Escape restores editor focus; detached Code actions opens help for the same snapshot; Quit closes the app. Visual acceptance found an undefined background token making dialogs transparent. Changed it to the theme panel color, observed computed-style regression RED→GREEN, rebuilt and visually confirmed the opaque native card. Local evidence under `.superpowers/t6a-*`; no push or merge.
