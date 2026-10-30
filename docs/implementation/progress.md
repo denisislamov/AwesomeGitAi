@@ -91,3 +91,7 @@ T6a native follow-up passed after unlock: keyboard help, examples/source, Escape
 ## T7 — implemented and macOS export/import/restart verified
 
 Project Memory adds scoped search, explicit export/import previews, external provenance, context retrieval and whole-scope data erasure. Important fresh-review findings corrected with regression tests. Rust130/probe4/UI90/native8, contracts/typecheck/macOS build pass; browser13 existing + focused new Memory scenario pass. Native export/import and persistence after Quit/relaunch verified on a disposable repository without Git changes. Physical network-disconnection acceptance remains unrun; native erase stopped at confirmation, automated fixture erasure passed. See [T7 results and remaining bounded limitations](../architecture/t7-results.md). Local commits only; T8 not started.
+
+## T8 — deferred by user
+
+2026-10-30: user explicitly deferred T8 until further authorization. Requirements remain in the specification and plan; do not start implementation or automatically advance from T7. Current platform scope remains macOS.

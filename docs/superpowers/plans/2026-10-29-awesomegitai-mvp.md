@@ -201,6 +201,8 @@ Implementation uses one compact MemoryDialog and scope-wide erasure. Search is l
 
 ## T8 · Headless host и приватный remote API
 
+**Статус: отложен по указанию пользователя 30 октября 2026. Начинать только после его явной отмашки.** Требования ниже сохранены; автоматический переход после T7 запрещён.
+
 **Files:** create `crates/host/src/remote/{routes.rs,auth.rs,pairing.rs,events.rs}`, `crates/host/tests/remote.rs`, `apps/client/src/features/connection/{HostPicker.tsx,PairingPanel.tsx}`, `docs/remote-setup.md`, `packaging/systemd/agai-host.service`, `crates/admin/src/main.rs`, `crates/admin/tests/headless_bootstrap.rs`.
 **Interfaces:** consumes HostService; produces `/v1/hello`, `/v1/pair/request`, `/v1/pair/status`, `/v1/read`, `/v1/reviews`, `/v1/events?after=...`; local IPC `create_invitation(repo_ids)` / `approve_pairing(id)` / `revoke_device(id)`; native `RemoteHostClient` implements T1 HostClient. Локальная CLI `agai-admin repo register PATH`, `remote enable|disable`, `pair create --repo ID`, `pair list`, `pair approve ID`, `devices list`, `devices revoke ID` обращается к тому же IPC под тем же OS-пользователем; не принимает arbitrary remote RPC.
 
