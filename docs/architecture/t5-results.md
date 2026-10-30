@@ -36,3 +36,7 @@ Partial staging accepts bounded UTF-8 text (2 MiB/file, bounded diff matrix). Bi
 The common lock coordinates this application's processes/worktrees. Git's index/ref locks and revalidation detect external changes, but cannot lock arbitrary editor writes atomically. Git handles hook/signing/auth failures; raw hook output is not displayed because it may contain secrets. Remote configuration and interactive authentication setup remain in the terminal. No real GitHub push or hosted authentication/signing acceptance was performed; remote tests are local, and authentication failure is simulated.
 
 Job receipts/previews are bounded and in memory; restarting the host loses them. A cancelled clone may leave a partial destination, which is retained for inspection. Android, iOS and Windows remain deferred. T6 traces/diagrams are not part of this change.
+
+## Final native follow-up
+
+2026-10-30: after user unlock, the final bundle started a commit with a 90-second pre-commit hook. The native Cancel button completed with CANCELLED, controls re-enabled, hook entry confirmed, HEAD remained `5cf1387828c2f91c9ca2042d9921480495daf5c4`, and index.lock was absent. Git panel detached into its own macOS window displaying the same cancelled job, then redocked successfully. Final manual T5 acceptance is closed; physical second-monitor verification remains excluded.
