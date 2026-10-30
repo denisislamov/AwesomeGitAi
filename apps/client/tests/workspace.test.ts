@@ -282,3 +282,23 @@ it("repository transition refuses old-scope file requests and ignores old polls"
   expect(w.state.repo?.repo_id).toBe("B");
   expect(w.state.tabs).toEqual([]);
 });
+
+it("discards late explanation results after switching files", async () => {
+  const f = fixture();
+  const original = f.api.desktop;
+  let finish: (v: DesktopResponse) => void = () => {};
+  f.api.desktop = async (r) =>
+    r.kind === "GetDecisions"
+      ? new Promise((resolve) => {
+          finish = resolve;
+        })
+      : original(r);
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  await w.openFile(path);
+  const pending = w.refreshExplanations();
+  w.close(w.state.activeTab!);
+  finish({ kind: "Decisions", decisions: [], truncated: true });
+  await pending;
+  expect(w.state.explanationsTruncated).toBe(false);
+});

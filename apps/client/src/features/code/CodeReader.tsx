@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment } from "@codemirror/state";
 import {
   EditorView,
+  gutter,
+  GutterMarker,
   lineNumbers,
   highlightActiveLineGutter,
   keymap,
@@ -20,6 +22,25 @@ import { python } from "@codemirror/lang-python";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import { tags } from "@lezer/highlight";
 import type { CodeTab, Workspace } from "../../workspace";
+class ExplanationMarker extends GutterMarker {
+  constructor(
+    readonly summary: string,
+    readonly open: () => void,
+  ) {
+    super();
+  }
+  toDOM() {
+    const b = document.createElement("button");
+    b.textContent = "●";
+    // CodeMirror gutters are aria-hidden; keyboard users use selection + Explain.
+    b.tabIndex = -1;
+    b.title = this.summary;
+    b.setAttribute("aria-label", `Объяснение: ${this.summary}`);
+    b.className = "code-explanation-marker";
+    b.onclick = this.open;
+    return b;
+  }
+}
 const syntax = HighlightStyle.define([
   { tag: tags.keyword, color: "#fe8019" },
   { tag: tags.typeName, color: "#fabd2f" },
@@ -53,6 +74,9 @@ export function CodeReader({
 }) {
   const parent = useRef<HTMLDivElement>(null);
   const editor = useRef<EditorView | null>(null);
+  const markerEditors = useRef<
+    { view: EditorView; side: "Old" | "New"; compartment: Compartment }[]
+  >([]);
   const selected = useRef<{ side: "Old" | "New"; start: number; end: number }>({
     side: "New",
     start: 1,
@@ -61,8 +85,12 @@ export function CodeReader({
   const [line, setLine] = useState("1");
   useEffect(() => {
     if (!parent.current) return;
-    const a = tab.data.base.files[0],
-      b = tab.data.target.files[0];
+    const a = tab.data.base.files.find(
+        (f) => f.path.raw_base64 === tab.path.raw_base64,
+      )!,
+      b = tab.data.target.files.find(
+        (f) => f.path.raw_base64 === tab.path.raw_base64,
+      )!;
     const decode = (bytes: number[]) => {
       const text = new TextDecoder("utf-8", { fatal: true }).decode(
         new Uint8Array(bytes),
@@ -76,7 +104,9 @@ export function CodeReader({
         : /\.[cm]?[jt]sx?$/.test(tab.path.display)
           ? javascript({ typescript: true, jsx: true })
           : [];
+    const compartments = { Old: new Compartment(), New: new Compartment() };
     const extension = (side: "Old" | "New") => [
+      compartments[side].of([]),
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
       EditorView.contentAttributes.of({
@@ -98,6 +128,7 @@ export function CodeReader({
             backgroundColor: light ? "#fbf1c7" : "#1d2021",
             color: light ? "#3c3836" : "#ebdbb2",
             fontSize: "var(--code-size)",
+            lineHeight: "1.4",
           },
           ".cm-scroller": { fontFamily: "Monaco, monospace", overflow: "auto" },
           ".cm-gutters": {
@@ -106,7 +137,7 @@ export function CodeReader({
             border: "none",
           },
           ".cm-line": { padding: "0 12px" },
-          ".cm-content": { padding: "14px 0" },
+          ".cm-content": { padding: "8px 0" },
           ".cm-cursor": { borderLeftColor: "#fabd2f" },
           ".cm-selectionBackground": {
             backgroundColor: light
@@ -138,6 +169,10 @@ export function CodeReader({
         gutter: true,
       });
       views = [merge.a, merge.b];
+      markerEditors.current = [
+        { view: merge.a, side: "Old", compartment: compartments.Old },
+        { view: merge.b, side: "New", compartment: compartments.New },
+      ];
       editor.current = b.state === "Absent" ? merge.a : merge.b;
       cleanup = () => merge.destroy();
     } else {
@@ -162,6 +197,13 @@ export function CodeReader({
         parent: parent.current,
       });
       views = [v];
+      markerEditors.current = [
+        {
+          view: v,
+          side: removed ? "Old" : "New",
+          compartment: removed ? compartments.Old : compartments.New,
+        },
+      ];
       editor.current = v;
       cleanup = () => v.destroy();
     }
@@ -186,10 +228,60 @@ export function CodeReader({
       views.forEach((v) => v.scrollDOM.removeEventListener("scroll", onscroll));
       cleanup();
       editor.current = null;
+      markerEditors.current = [];
     };
   }, [tab.data, view, light, ignoreWhitespace]);
-  const file = tab.data.target.files[0];
-  const old = tab.data.base.files[0];
+  useEffect(() => {
+    for (const { view: editor, side, compartment } of markerEditors.current) {
+      const markers = new Map<number, { summary: string; end: number }>();
+      for (const decision of workspace.state.explanations) {
+        if (decision.superseded_by) continue;
+        for (const { anchor, resolution } of decision.anchors) {
+          if (
+            anchor.side !== side ||
+            anchor.path.raw_base64 !== tab.path.raw_base64
+          )
+            continue;
+          if (resolution !== "Exact" && typeof resolution !== "object")
+            continue;
+          const start =
+            typeof resolution === "object"
+              ? resolution.Relocated.start_line
+              : anchor.start_line;
+          const end =
+            typeof resolution === "object"
+              ? resolution.Relocated.end_line
+              : anchor.end_line;
+          markers.set(start, {
+            summary: `${decision.summary}${resolution === "Exact" ? "" : " (перенесённая привязка)"}`,
+            end,
+          });
+        }
+      }
+      editor.dispatch({
+        effects: compartment.reconfigure(
+          gutter({
+            class: "explanation-gutter",
+            lineMarker(v, line) {
+              const number = v.state.doc.lineAt(line.from).number,
+                m = markers.get(number);
+              return m
+                ? new ExplanationMarker(m.summary, () =>
+                    workspace.explain(side, number, m.end),
+                  )
+                : null;
+            },
+          }),
+        ),
+      });
+    }
+  }, [workspace.state.explanations, tab.data, view, light, ignoreWhitespace]);
+  const file = tab.data.target.files.find(
+    (f) => f.path.raw_base64 === tab.path.raw_base64,
+  )!;
+  const old = tab.data.base.files.find(
+    (f) => f.path.raw_base64 === tab.path.raw_base64,
+  )!;
   if (file.state === "Conflicted" || old.state === "Conflicted")
     return (
       <div className="conflict">

@@ -216,3 +216,51 @@ test("chosen base lists files deleted before the target parent", async ({
     info.first.slice(0, 8),
   );
 });
+
+test("real MCP explanations appear at code and human acceptance stays on the original pair", async ({
+  page,
+  request,
+}) => {
+  const info = await (await request.get("/test-info")).json();
+  const seeded = await request.post("/test-mcp-seed");
+  expect(seeded.ok()).toBeTruthy();
+  await page.goto("/e2e/");
+  await page.getByLabel("Путь к репозиторию").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Открыть репозиторий", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Файл Code.cs", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Начальный баланс 75", exact: true }),
+  ).toBeVisible();
+  await page.getByTitle(/Начальный баланс 75/).click();
+  await expect(page.getByTestId("explanation-target")).toContainText(
+    "строки 2–2",
+  );
+  await expect(
+    page.getByRole("button", { name: "Принято", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Открыть исходную версию", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Принято", exact: true }),
+  ).toBeVisible();
+  await page.getByText("Подробности и проверки", { exact: true }).click();
+  await expect(
+    page.getByText("Агент не сообщил альтернативы.", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Проверены байты тестового файла, не выполнение C#.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Принято", exact: true }).click();
+  await expect(
+    page.getByText("Ваша отметка: Принято", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Файл Code.cs", exact: true }).click();
+  await expect(
+    page.getByText("Ваша отметка: Принято", { exact: true }),
+  ).toHaveCount(0);
+});

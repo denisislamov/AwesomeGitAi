@@ -9,6 +9,8 @@ import type {
   Commit,
   Revision,
   Side,
+  DecisionView,
+  ReviewState,
 } from "../../../packages/api/src/generated";
 export interface WorkspaceApi {
   read(request: ReadRequest): Promise<ReadResponse>;
@@ -36,6 +38,9 @@ export type CodeTab = {
   stale: boolean;
 };
 type State = {
+  explanations: DecisionView[];
+  explanationsTruncated: boolean;
+  explanationsError: string | null;
   repo: RepoState | null;
   root: string;
   branches: BranchRef[];
@@ -68,6 +73,9 @@ export const revisionLabel = (r: Revision): string =>
       : `Снимок ${r.Snapshot.id.slice(0, 8)}`;
 export class Workspace {
   state: State = {
+    explanations: [],
+    explanationsTruncated: false,
+    explanationsError: null,
     repo: null,
     root: "",
     branches: [],
@@ -124,6 +132,9 @@ export class Workspace {
         root: r.root,
         branches: r.branches,
         tabs: [],
+        explanations: [],
+        explanationsTruncated: false,
+        explanationsError: null,
         activeTab: null,
         selection: null,
         paths: [],
@@ -220,27 +231,40 @@ export class Workspace {
       this.patch({
         tabs: [...tabs, tab],
         activeTab: id,
+        explanations: [],
+        explanationsTruncated: false,
         selection: null,
         busy: false,
       });
+      void this.refreshExplanations();
     } catch (e) {
       if (epoch === this.epoch && serial === this.opening) this.error(e);
     }
   }
   activate(id: string) {
     ++this.opening;
-    this.patch({ activeTab: id, selection: null, busy: false });
+    this.patch({
+      activeTab: id,
+      selection: null,
+      busy: false,
+      explanations: [],
+      explanationsTruncated: false,
+    });
+    void this.refreshExplanations();
   }
   close(id: string) {
     const tabs = this.state.tabs.filter((t) => t.id !== id);
     this.patch({
       tabs,
+      explanations: [],
+      explanationsTruncated: false,
       activeTab:
         this.state.activeTab === id
           ? (tabs.at(-1)?.id ?? null)
           : this.state.activeTab,
       selection: null,
     });
+    void this.refreshExplanations();
   }
   setScroll(id: string, scroll: number) {
     const tab = this.state.tabs.find((t) => t.id === id);
@@ -309,10 +333,13 @@ export class Workspace {
           ...t,
           stale:
             t.stale ||
-            ([t.base, t.target].some((r) => typeof r === "string") &&
+            ([t.base, t.target].some(
+              (r) => typeof r === "string" && r !== "Empty",
+            ) &&
               generation !== t.data.observed_generation),
         })),
       });
+      void this.refreshExplanations();
       if (changed) {
         const files = await this.api.desktop({
           kind: "ListFiles",
@@ -379,6 +406,93 @@ export class Workspace {
       },
       explanationOpen: true,
     });
+  }
+  async refreshExplanations() {
+    const tab = this.active();
+    if (!tab || this.state.openingRepository) return;
+    const epoch = this.epoch;
+    const comparisonId = tab.data.comparison.id;
+    try {
+      const result = await this.api.desktop({
+        kind: "GetDecisions",
+        scope: this.scope(),
+        comparison_id: comparisonId,
+        path: tab.path,
+      });
+      if (
+        epoch !== this.epoch ||
+        this.active()?.data.comparison.id !== comparisonId ||
+        this.state.openingRepository
+      )
+        return;
+      if (result.kind !== "Decisions") throw Error("INVALID_RESPONSE");
+      this.patch({
+        explanations: result.decisions,
+        explanationsTruncated: result.truncated,
+        explanationsError: null,
+      });
+    } catch (e) {
+      if (
+        epoch === this.epoch &&
+        this.active()?.data.comparison.id === comparisonId
+      )
+        this.patch({
+          explanationsError:
+            e && typeof e === "object" && "code" in e
+              ? String(e.code)
+              : String(e),
+        });
+    }
+  }
+  async reviewDecision(id: string, state: ReviewState, note = "") {
+    const tab = this.active();
+    const decision = this.state.explanations.find((d) => d.id === id);
+    if (!tab || !decision || this.state.openingRepository) return;
+    const epoch = this.epoch;
+    try {
+      await this.api.desktop({
+        kind: "ReviewDecision",
+        scope: this.scope(),
+        decision_id: id,
+        base_snapshot_id: tab.data.base.id,
+        target_snapshot_id: tab.data.target.id,
+        state,
+        note,
+        idempotency_key: crypto.randomUUID(),
+      });
+      if (epoch === this.epoch) await this.refreshExplanations();
+    } catch (e) {
+      if (epoch === this.epoch) this.error(e);
+    }
+  }
+  async openDecision(id: string) {
+    const d = this.state.explanations.find((d) => d.id === id);
+    const tab = this.active();
+    if (!d || !tab) return;
+    await this.openFile(
+      tab.path,
+      { Snapshot: { id: d.base_snapshot_id } },
+      { Snapshot: { id: d.target_snapshot_id } },
+    );
+  }
+  explanationRequest() {
+    const tab = this.active();
+    if (!tab || !this.state.repo) return "";
+    return JSON.stringify(
+      {
+        instruction:
+          "Read integration_guide via AwesomeGitAi MCP. Explain the selected change using recorded facts; preserve provenance and do not invent alternatives or execution results.",
+        schema_version: 1,
+        ...this.scope(),
+        comparison_id: tab.data.comparison.id,
+        base_snapshot_id: tab.data.base.id,
+        target_snapshot_id: tab.data.target.id,
+        path: tab.path.display,
+        selection: this.state.selection,
+      },
+      null,
+      2,
+    );
   }
   setExplanationLayout(layout: "panel" | "popover") {
     this.patch({ explanationLayout: layout });

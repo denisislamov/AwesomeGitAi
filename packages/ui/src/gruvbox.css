@@ -23,7 +23,7 @@ button {
   background: transparent;
   color: inherit;
   border-radius: 5px;
-  padding: 6px 9px;
+  padding: 3px 7px;
   text-align: left;
 }
 button:hover {
@@ -52,24 +52,25 @@ select {
   border-radius: 5px;
   background: var(--code);
   color: var(--text);
-  padding: 6px 8px;
+  padding: 3px 7px;
 }
 input[type="checkbox"] {
   accent-color: var(--accent);
 }
 p {
-  line-height: 1.65;
+  line-height: 1.4;
+  margin: 6px 0;
 }
 small {
-  font-size: max(12px, 0.8em);
+  font-size: inherit;
   color: var(--muted);
 }
 h4 {
-  font-size: 12px;
+  font-size: inherit;
   color: var(--muted);
   font-weight: 400;
-  letter-spacing: 1.5px;
-  margin: 14px 8px 7px;
+  letter-spacing: 0;
+  margin: 8px 6px 4px;
 }
 code {
   font-family: inherit;
@@ -88,6 +89,7 @@ code {
   background: var(--code);
   color: var(--text);
   font-size: var(--ui-size, 15px);
+  line-height: 1.35;
   height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -109,8 +111,8 @@ code {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: 8px;
+  padding: 6px 10px;
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -118,7 +120,7 @@ code {
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 6px;
   white-space: nowrap;
 }
 .brand-icon {
@@ -126,7 +128,7 @@ code {
   color: var(--accent);
 }
 .stage {
-  font-size: 12px;
+  font-size: inherit;
   background: var(--hover);
   padding: 4px 9px;
   border-radius: 4px;
@@ -149,10 +151,10 @@ code {
 .repo-strip {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 6px;
   padding: 6px 16px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: inherit;
   flex-shrink: 0;
 }
 .repo-strip > span:first-child {
@@ -178,15 +180,15 @@ code {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 10px 6px;
-  gap: 10px;
+  padding: 6px;
+  gap: 6px;
   overflow: hidden;
 }
 .segmented {
   display: flex;
   gap: 2px;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: inherit;
 }
 .file-tree > input {
   margin: 0 4px;
@@ -200,7 +202,7 @@ code {
   margin-bottom: 6px;
 }
 .file-list summary {
-  font-size: 12px;
+  font-size: inherit;
   color: var(--muted);
   padding: 8px;
   overflow: hidden;
@@ -213,7 +215,7 @@ code {
   align-items: center;
   gap: 8px;
   width: 100%;
-  font-size: 13px;
+  font-size: inherit;
 }
 .file-list button > span:nth-child(2) {
   overflow: hidden;
@@ -223,7 +225,7 @@ code {
 }
 .file-icon {
   color: var(--lane2);
-  font-size: 12px;
+  font-size: inherit;
   min-width: 22px;
 }
 .file-list small {
@@ -231,7 +233,7 @@ code {
 }
 .empty-small {
   padding: 10px;
-  font-size: 13px;
+  font-size: inherit;
   color: var(--muted);
 }
 .code-workspace {
@@ -253,7 +255,7 @@ code {
   display: flex;
   border-right: 1px solid var(--border);
   white-space: nowrap;
-  font-size: 13px;
+  font-size: inherit;
 }
 .tab.active {
   background: var(--code);
@@ -263,7 +265,7 @@ code {
   padding: 10px;
 }
 .tab small {
-  font-size: 12px;
+  font-size: inherit;
   margin-left: 7px;
 }
 .code-toolbar,
@@ -277,7 +279,7 @@ code {
   padding: 7px 12px;
   flex-wrap: wrap;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: inherit;
 }
 .code-toolbar select {
   max-width: 240px;
@@ -291,7 +293,7 @@ code {
   justify-content: space-between;
   gap: 8px;
   padding: 8px 14px;
-  font-size: 12px;
+  font-size: inherit;
   flex-shrink: 0;
 }
 .breadcrumbs > span {
@@ -331,7 +333,7 @@ code {
   white-space: nowrap;
 }
 .readonly {
-  font-size: 12px;
+  font-size: inherit;
   color: var(--lane0);
 }
 .explain-button {
@@ -393,10 +395,10 @@ code {
 }
 .snapshot-status {
   display: flex;
-  gap: 15px;
+  gap: 8px;
   justify-content: space-between;
   padding: 5px 12px;
-  font-size: 12px;
+  font-size: inherit;
   color: var(--muted);
   overflow: hidden;
   white-space: nowrap;
@@ -412,7 +414,7 @@ code {
   padding: 8px 12px;
   background: var(--panel);
   border-left: 3px solid var(--accent);
-  font-size: 12px;
+  font-size: inherit;
 }
 .stale-banner button {
   border-color: var(--accent);
@@ -435,13 +437,13 @@ code {
   color: var(--accent);
 }
 .welcome h1 {
-  font-size: 22px;
+  font-size: calc(var(--ui-size, 15px) + 3px);
   font-weight: 500;
 }
 .welcome p,
 .welcome span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: inherit;
 }
 .explanation {
   width: 290px;
@@ -454,41 +456,41 @@ code {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 16px;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--border);
 }
 .explanation-body {
-  padding: 22px 18px;
+  padding: 10px;
 }
 .eyebrow {
-  font-size: 12px;
+  font-size: inherit;
   color: var(--accent);
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 .explanation h2 {
-  font-size: 18px;
+  font-size: calc(var(--ui-size, 15px) + 1px);
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 .explanation p {
-  font-size: 13px;
+  font-size: inherit;
   color: var(--muted);
 }
 .context-card {
-  padding: 14px;
+  padding: 8px;
   background: var(--code);
   border: 1px solid var(--border);
   border-radius: 7px;
-  font-size: 12px;
-  line-height: 1.8;
+  font-size: inherit;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
 .quiet-note {
-  font-size: 12px;
-  line-height: 1.7;
+  font-size: inherit;
+  line-height: 1.4;
   color: var(--muted);
-  margin-top: 24px;
-  padding-top: 16px;
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid var(--border);
 }
 .explanation.popover {
@@ -526,10 +528,10 @@ code {
 .git-heading {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   padding: 6px 14px;
   border-bottom: 1px solid var(--border);
-  font-size: 12px;
+  font-size: inherit;
 }
 .git-heading strong {
   color: var(--accent);
@@ -558,7 +560,7 @@ code {
 .branches button {
   display: block;
   width: 100%;
-  font-size: 12px;
+  font-size: inherit;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -576,9 +578,9 @@ code {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   border-radius: 0;
-  font-size: 12px;
+  font-size: inherit;
   padding: 0 12px 0 4px;
 }
 .commit-row svg {
@@ -603,16 +605,16 @@ code {
   color: var(--lane0);
 }
 .commit-row code {
-  font-size: 12px;
+  font-size: inherit;
   color: var(--muted);
 }
 .commit-details {
   width: 290px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
-  padding: 14px 16px;
+  padding: 8px 10px;
   overflow: auto;
-  font-size: 12px;
+  font-size: inherit;
   overflow-wrap: anywhere;
 }
 .commit-details p {
@@ -630,13 +632,13 @@ code {
 .statusbar {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 8px;
   flex-shrink: 0;
   padding: 5px 12px;
   background: var(--panel);
   border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: 12px;
+  font-size: inherit;
 }
 .conflict {
   padding: 20px;
@@ -659,16 +661,16 @@ code {
     padding: 8px;
   }
   .brand strong {
-    font-size: 13px;
+    font-size: inherit;
   }
   .stage {
     display: none;
   }
   .repo-form button {
-    font-size: 12px;
+    font-size: inherit;
   }
   .repo-strip {
-    gap: 12px;
+    gap: 8px;
   }
   .breadcrumbs {
     flex-wrap: wrap;
@@ -806,7 +808,7 @@ code {
     display: none;
   }
   .git-heading button {
-    font-size: 12px;
+    font-size: inherit;
   }
   .commit-row {
     gap: 4px;
@@ -821,27 +823,27 @@ code {
     display: none;
   }
   .statusbar {
-    font-size: 12px;
+    font-size: inherit;
   }
   .code-toolbar {
-    font-size: 12px;
+    font-size: inherit;
   }
   .code-toolbar select {
     max-width: 165px;
   }
   .view-options {
     gap: 2px;
-    font-size: 12px;
+    font-size: inherit;
   }
   .reader-actions button {
-    font-size: 12px;
+    font-size: inherit;
     padding: 4px;
   }
   .snapshot-status {
     display: none;
   }
   .welcome h1 {
-    font-size: 18px;
+    font-size: calc(var(--ui-size, 15px) + 1px);
   }
   .welcome {
     padding: 12px;
@@ -873,7 +875,7 @@ code {
 }
 .commit-date {
   color: var(--muted);
-  font-size: 12px;
+  font-size: inherit;
 }
 @media (max-width: 1150px) {
   .commit-date {
@@ -887,4 +889,95 @@ code {
   .commit-author {
     display: none;
   }
+}
+
+.explanation-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.decision-card {
+  margin: 8px 0;
+  overflow-wrap: anywhere;
+}
+.decision-card h3 {
+  font-size: inherit;
+  margin: 6px 0;
+}
+.decision-card details {
+  margin: 8px 0;
+}
+.decision-card summary {
+  cursor: pointer;
+  color: var(--aqua, #8ec07c);
+}
+.human-review input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+.agent-modal {
+  position: fixed;
+  inset: 8% max(16px, 12%);
+  z-index: 200;
+  background: #1d2021;
+  color: #ebdbb2;
+  border: 1px solid #665c54;
+  box-shadow: 0 0 0 100vmax #0009;
+  padding: 24px;
+  overflow: auto;
+  border-radius: 8px;
+}
+.agent-modal header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.agent-modal pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #282828;
+  padding: 16px;
+}
+.code-explanation-marker {
+  color: #83a598;
+  background: transparent;
+  padding: 0 4px;
+  border: 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+.code-explanation-marker:hover {
+  color: #fabd2f;
+}
+
+/* Shared compact typography for docked and native-window panels. */
+.app :is(h2, h3, h4) {
+  line-height: 1.35;
+  margin-block: 8px 6px;
+}
+.app :is(ul, ol) {
+  margin-block: 6px;
+  padding-inline-start: 22px;
+}
+.app li + li {
+  margin-top: 3px;
+}
+.app .context-card h3 {
+  font-size: inherit;
+  font-weight: 600;
+}
+.app .explanation > header {
+  font-weight: 600;
+}
+.agent-modal {
+  background: var(--code);
+  color: var(--text);
+  padding: 16px;
+}
+.agent-modal pre {
+  background: var(--panel);
+  padding: 10px;
+  font: inherit;
 }

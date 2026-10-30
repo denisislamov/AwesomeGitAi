@@ -64,6 +64,21 @@ export function testHost() {
           );
           return;
         }
+        if (req.url === "/test-mcp-seed") {
+          try {
+            const output = execFileSync(
+              "python3",
+              [resolve("e2e/seed-explanation.py"), join(dir, "profile"), repo],
+              { encoding: "utf8", timeout: 30000 },
+            );
+            res.setHeader("Content-Type", "application/json");
+            res.end(output);
+          } catch {
+            res.statusCode = 500;
+            res.end("MCP_FIXTURE_FAILED");
+          }
+          return;
+        }
         if (req.url === "/test-change") {
           writeFileSync(join(repo, "Code.cs"), "class ChangedExternally {}\n");
           res.end("ok");

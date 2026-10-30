@@ -1,0 +1,179 @@
+.dock-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+.dock-toolbar {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border, #665c54);
+  position: relative;
+}
+.dock-toolbar small {
+  opacity: 0.65;
+}
+.dock-root {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.dock-split {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.dock-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg, #282828);
+}
+.dock-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: var(--surface, #3c3836);
+  cursor: grab;
+  flex: none;
+}
+.dock-title strong {
+  flex: 1;
+  font-size: inherit;
+}
+.dock-title button {
+  padding: 2px 6px;
+}
+.dock-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+.dock-content > aside,
+.dock-content > main,
+.dock-content > section {
+  min-height: 0;
+  flex: 1;
+}
+.dock-divider {
+  background: var(--border, #504945);
+  touch-action: none;
+}
+.horizontal > .dock-divider {
+  cursor: col-resize;
+}
+.vertical > .dock-divider {
+  cursor: row-resize;
+}
+.dock-divider:focus-visible,
+.dock-divider:hover {
+  background: var(--accent, #d79921);
+  outline: 2px solid var(--accent, #d79921);
+  outline-offset: -2px;
+}
+.dock-menu > div,
+.dock-toolbar-menu {
+  position: absolute;
+  z-index: 50;
+  max-height: 70vh;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg, #282828);
+  padding: 8px;
+  border: 1px solid var(--border, #665c54);
+  box-shadow: 0 4px 20px #0008;
+}
+.dock-menu > div {
+  right: 8px;
+}
+.dock-menu summary {
+  cursor: pointer;
+  list-style: none;
+}
+.dock-toolbar details > summary {
+  cursor: pointer;
+}
+.dock-panel .workspace {
+  height: 100%;
+}
+/* These panels previously had fixed sidebar widths in the workspace shell. */
+.dock-content > .file-tree,
+.dock-content > .explanation,
+.dock-content > .code-workspace,
+.dock-content > .git-log {
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+.dock-content > .explanation {
+  inset: auto;
+  max-height: none;
+}
+@media (max-width: 700px) {
+  .dock-toolbar small {
+    display: none;
+  }
+  .dock-root {
+    overflow: auto;
+  }
+  .dock-split {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .dock-split > .dock-divider {
+    display: none;
+  }
+  .dock-panel {
+    flex: none;
+    width: 100%;
+    height: 260px;
+  }
+  .dock-panel-files {
+    height: 160px;
+  }
+  .dock-panel-code {
+    height: 560px;
+  }
+  .dock-panel-git {
+    height: 320px;
+  }
+  .dock-content > .file-tree {
+    display: flex;
+  }
+  .dock-content > .explanation {
+    inset: auto;
+    max-height: none;
+  }
+}
+/* Explicit card mode overlays the main workspace instead of stretching inside
+   its dock slot. Detached explanation windows keep their normal full panel. */
+.dock-workspace .dock-content > .explanation.popover {
+  position: fixed;
+  inset: auto 16px 40px auto;
+  width: min(420px, calc(100vw - 32px));
+  height: auto;
+  max-height: min(70vh, 640px);
+  overflow: auto;
+  z-index: 60;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 30px #0008;
+}

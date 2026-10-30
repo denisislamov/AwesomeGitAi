@@ -1,0 +1,315 @@
+import { Workspace, type WorkspaceApi } from "../../workspace";
+import type {
+  RepoPath,
+  Revision,
+  Side,
+  ReviewState,
+} from "../../../../../packages/api/src/generated";
+import {
+  sendPanelAction,
+  closePanel,
+  type PanelAction,
+  type PanelActionName,
+} from "./native";
+export type PanelSettings = {
+  view?: "unified" | "split";
+  light?: boolean;
+  scale?: number;
+  showDeleted?: boolean;
+  ignoreWhitespace?: boolean;
+  mode?: string;
+};
+const scopeKey = (w: Workspace) =>
+  JSON.stringify([
+    w.state.root,
+    w.state.repo?.repo_id,
+    w.state.repo?.worktree_id,
+    w.state.repo?.generation,
+  ]);
+export function panelSnapshot(w: Workspace, settings: PanelSettings) {
+  return {
+    scope: scopeKey(w),
+    workspace: {
+      ...w.state,
+      tabs: w.state.tabs.map((t) => ({
+        ...t,
+        data: t.id === w.state.activeTab ? t.data : undefined,
+      })),
+    },
+    settings,
+  };
+}
+export type SharedPanelState = ReturnType<typeof panelSnapshot>;
+function object(p: unknown): p is Record<string, any> {
+  return !!p && typeof p === "object" && !Array.isArray(p);
+}
+function revision(r: unknown): r is Revision {
+  if (["Empty", "Head", "Index", "Worktree"].includes(r as string)) return true;
+  if (!object(r)) return false;
+  return (
+    (object(r.Commit) &&
+      typeof r.Commit.oid === "string" &&
+      /^[a-f0-9]{40,64}$/.test(r.Commit.oid)) ||
+    (object(r.Snapshot) &&
+      typeof r.Snapshot.id === "string" &&
+      /^[a-f0-9-]{36}$/.test(r.Snapshot.id))
+  );
+}
+export async function dispatchPanelAction(
+  w: Workspace,
+  message: PanelAction,
+  onSettings?: (v: PanelSettings) => void,
+): Promise<void> {
+  const p = message.payload;
+  if (!object(p) || p.scope !== scopeKey(w) || w.state.openingRepository)
+    return;
+  const tab = w.active();
+  switch (message.action) {
+    case "refresh_explanations":
+      await w.refreshExplanations();
+      break;
+    case "review_decision":
+      if (
+        tab &&
+        p.comparisonId === tab.data.comparison.id &&
+        p.baseSnapshotId === tab.data.base.id &&
+        p.targetSnapshotId === tab.data.target.id &&
+        w.state.explanations.some((d) => d.id === p.id) &&
+        ["Viewed", "Accepted", "Question"].includes(p.state) &&
+        typeof p.note === "string" &&
+        p.note.length <= 4096
+      )
+        await w.reviewDecision(p.id, p.state, p.note);
+      break;
+    case "explain_detail":
+      if (
+        tab &&
+        p.comparisonId === tab.data.comparison.id &&
+        w.state.explanations.some((d) => d.id === p.id)
+      )
+        await w.openDecision(p.id);
+      break;
+    case "redock":
+      await closePanel(message.panel);
+      break;
+    case "select_tab":
+      if (w.state.tabs.some((t) => t.id === p.id)) w.activate(p.id);
+      break;
+    case "close_tab":
+      if (w.state.tabs.some((t) => t.id === p.id)) w.close(p.id);
+      break;
+    case "select_commit":
+      if (w.state.commits.some((c) => c.oid === p.oid)) w.selectCommit(p.oid);
+      break;
+    case "select_branch":
+      if (p.name === "all" || w.state.branches.some((b) => b.name === p.name))
+        w.filterBranch(p.name);
+      break;
+    case "load_more":
+      await w.more();
+      break;
+    case "refresh":
+      if (p.kind === "history") await w.refreshHistory();
+      else if (tab) await w.openFile(tab.path, tab.base, tab.target, true);
+      break;
+    case "show_explanation":
+      if (typeof p.open === "boolean") w.showExplanation(p.open);
+      break;
+    case "explanation_layout":
+    case "set_explanation_layout":
+      if (p.layout === "panel" || p.layout === "popover")
+        w.setExplanationLayout(p.layout);
+      break;
+    case "set_selection": {
+      const file =
+        tab &&
+        (p.side === "Old" ? tab.data.base : tab.data.target).files.find(
+          (f) => f.path.raw_base64 === tab.path.raw_base64,
+        );
+      if (
+        tab &&
+        file &&
+        p.comparisonId === tab.data.comparison.id &&
+        (p.side === "Old" || p.side === "New") &&
+        Number.isSafeInteger(p.startLine) &&
+        Number.isSafeInteger(p.endLine) &&
+        p.startLine >= 1 &&
+        p.endLine >= p.startLine &&
+        p.endLine <=
+          1 +
+            file.bytes.reduce((count, byte) => count + (byte === 10 ? 1 : 0), 0)
+      )
+        w.explain(p.side, p.startLine, p.endLine);
+      break;
+    }
+    case "set_view": {
+      const v: PanelSettings = {};
+      if (p.view === "split" || p.view === "unified") v.view = p.view;
+      if (typeof p.light === "boolean") v.light = p.light;
+      if ([100, 110, 125, 150].includes(p.scale)) v.scale = p.scale;
+      if (typeof p.showDeleted === "boolean") v.showDeleted = p.showDeleted;
+      if (typeof p.ignoreWhitespace === "boolean")
+        v.ignoreWhitespace = p.ignoreWhitespace;
+      if (p.mode === "work" || p.mode === "index") v.mode = p.mode;
+      onSettings?.(v);
+      break;
+    }
+    case "select_file":
+    case "open_revision": {
+      if (!revision(p.base) || !revision(p.target)) break;
+      let path =
+        w.state.paths.find((f) => f.raw_base64 === p.path)?.raw_base64 ===
+        p.path
+          ? w.state.paths.find((f) => f.raw_base64 === p.path)
+          : w.state.tabs.find((t) => t.path.raw_base64 === p.path)?.path;
+      // Historical-only files are validated against the selected commit's actual file list.
+      if (
+        !path &&
+        object(p.target) &&
+        "Commit" in p.target &&
+        object(p.target.Commit) &&
+        p.target.Commit.oid === w.state.selectedCommit
+      ) {
+        const r = await w.api.desktop({
+          kind: "CommitDetails",
+          scope: w.scope(),
+          oid: p.target.Commit.oid,
+          base:
+            object(p.base) && "Commit" in p.base && object(p.base.Commit)
+              ? p.base.Commit.oid
+              : null,
+        });
+        if (p.scope !== scopeKey(w)) break;
+        if (r.kind === "CommitDetails")
+          path = r.paths.find((f) => f.raw_base64 === p.path);
+      }
+      if (path) await w.openFile(path, p.base, p.target, p.refresh === true);
+      break;
+    }
+  }
+}
+export class DetachedWorkspace extends Workspace {
+  private remoteListeners = new Set<() => void>();
+  private remoteScope = "";
+  constructor(api: WorkspaceApi) {
+    super(api);
+  }
+  override subscribe = (f: () => void) => {
+    this.remoteListeners.add(f);
+    return () => {
+      this.remoteListeners.delete(f);
+    };
+  };
+  hydrate(snapshot: SharedPanelState) {
+    const incoming = snapshot.workspace;
+    const sameRepository =
+      this.state.root === incoming.root &&
+      this.state.repo?.repo_id === incoming.repo?.repo_id &&
+      this.state.repo?.worktree_id === incoming.repo?.worktree_id;
+    const previousTabs = new Map(
+      sameRepository ? this.state.tabs.map((tab) => [tab.id, tab]) : [],
+    );
+    const tabs = incoming.tabs.map((tab) => {
+      const previous = previousTabs.get(tab.id);
+      if (!previous) return tab;
+      // Snapshot/comparison IDs identify immutable content. Wire deserialization
+      // must not recreate CodeMirror for an unchanged comparison on every poll.
+      const old = previous.data;
+      const next = tab.data;
+      const sameComparison =
+        old?.comparison?.id &&
+        next?.comparison?.id &&
+        old.comparison.id === next.comparison.id &&
+        old.base.id === next.base.id &&
+        old.target.id === next.target.id;
+      return {
+        ...tab,
+        scroll: previous.scroll,
+        data: sameComparison || !next ? old : next,
+      };
+    });
+    this.remoteScope = snapshot.scope;
+    this.state = { ...incoming, tabs } as Workspace["state"];
+    this.remoteListeners.forEach((f) => f());
+  }
+  action(action: PanelActionName, payload: Record<string, unknown> = {}) {
+    return sendPanelAction(action, {
+      ...payload,
+      scope: this.remoteScope,
+    }).catch((e) => this.error(e));
+  }
+  override error(e: unknown) {
+    this.state = { ...this.state, error: String(e) };
+    this.remoteListeners.forEach((f) => f());
+  }
+  override async openFile(
+    path: RepoPath,
+    base: Revision = "Index",
+    target: Revision = "Worktree",
+    refresh = false,
+  ) {
+    await this.action("open_revision", {
+      path: path.raw_base64,
+      base,
+      target,
+      refresh,
+    });
+  }
+  override activate(id: string) {
+    void this.action("select_tab", { id });
+  }
+  override close(id: string) {
+    void this.action("close_tab", { id });
+  }
+  override selectCommit(oid: string) {
+    void this.action("select_commit", { oid });
+  }
+  override filterBranch(name: string) {
+    void this.action("select_branch", { name });
+  }
+  override async more() {
+    await this.action("load_more");
+  }
+  override async refreshHistory() {
+    await this.action("refresh", { kind: "history" });
+  }
+  override async refreshExplanations() {
+    await this.action("refresh_explanations");
+  }
+  override async reviewDecision(id: string, state: ReviewState, note = "") {
+    const tab = this.active();
+    if (tab)
+      await this.action("review_decision", {
+        id,
+        state,
+        note,
+        comparisonId: tab.data.comparison.id,
+        baseSnapshotId: tab.data.base.id,
+        targetSnapshotId: tab.data.target.id,
+      });
+  }
+  override async openDecision(id: string) {
+    await this.action("explain_detail", {
+      id,
+      comparisonId: this.active()?.data.comparison.id,
+    });
+  }
+  override async poll() {}
+  override async openRepository() {
+    throw Error("MAIN_WINDOW_REQUIRED");
+  }
+  override explain(side: Side, startLine: number, endLine: number) {
+    void this.action("set_selection", {
+      side,
+      startLine,
+      endLine,
+      comparisonId: this.active()?.data.comparison.id,
+    });
+  }
+  override setExplanationLayout(layout: "panel" | "popover") {
+    void this.action("explanation_layout", { layout });
+  }
+  override showExplanation(open: boolean) {
+    void this.action("show_explanation", { open });
+  }
+}
