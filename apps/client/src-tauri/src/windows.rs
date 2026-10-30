@@ -5,9 +5,10 @@ use serde_json::Value;
 use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 const PANELS: [&str; 4] = ["files", "code", "explanation", "git"];
-const ACTIONS: [&str; 30] = [
+const ACTIONS: [&str; 34] = [
     "git_action", "git_prepare", "git_apply", "git_dismiss", "git_cancel",
     "learning_mode", "learning_refresh", "learning_open", "learning_location", "trace_move", "trace_frame",
+    "relations_load", "relations_show", "relation_location", "relations_back",
     "select_file",
     "select_tab",
     "close_tab",
@@ -298,6 +299,9 @@ mod tests {
     #[test]
     fn action_limits_reject_commands_and_excessive_payloads() {
         assert!(validate_action("select_file", &serde_json::json!({"id":"a"})).is_ok());
+        for action in ["relations_load", "relations_show", "relation_location", "relations_back"] {
+            assert!(validate_action(action, &Value::Null).is_ok());
+        }
         assert!(validate_action("exec", &Value::Null).is_err());
         assert!(validate_action("select_file", &Value::String("x".repeat(65537))).is_err());
     }

@@ -52,6 +52,39 @@ export function testHost() {
     configureServer(server: any) {
       server.httpServer?.once("close", cleanup);
       server.middlewares.use(async (req: any, res: any, next: any) => {
+        if (req.url === "/test-relations") {
+          const relations = join(dir, "relations");
+          execFileSync("git", ["init", "-q", relations]);
+          const relationGit = (...args: string[]) =>
+            execFileSync("git", ["-C", relations, ...args]);
+          relationGit("config", "user.name", "UI Test");
+          relationGit("config", "user.email", "ui@example.invalid");
+          writeFileSync(
+            join(relations, "Relations.ts"),
+            "export function spend(cost: number): number {\n  return cost + 1;\n}\n",
+          );
+          writeFileSync(
+            join(relations, "Usage.ts"),
+            "import { spend } from './Relations';\nexport const result = spend(20);\n",
+          );
+          writeFileSync(
+            join(relations, "Relations.cs"),
+            "public class RelationWallet {\n  public int Spend(int cost) { return cost + 1; }\n}\n",
+          );
+          writeFileSync(
+            join(relations, "Usage.cs"),
+            "public class RelationCaller {\n  public int Run() { return new RelationWallet().Spend(20); }\n}\n",
+          );
+          writeFileSync(
+            join(relations, "Notes.txt"),
+            "unsupported language fixture\n",
+          );
+          relationGit("add", ".");
+          relationGit("commit", "--allow-empty", "-qm", "Relations fixture");
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ repo: relations }));
+          return;
+        }
         if (req.url === "/test-operations") {
           const ops = join(dir, "operations");
           execFileSync("git", ["init", "-q", ops]);

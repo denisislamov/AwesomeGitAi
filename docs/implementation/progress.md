@@ -74,3 +74,8 @@ T6 implementation commit `12e4241`; bundled macOS host/MCP learning smoke also p
 ## Compact workspace + T6 native follow-up
 
 Approved UI simplification delivered: native command menus, on-demand forms/settings, one editor context row, expandable revision IDs and simplified learning headings. Final native trace, keyboard, diagram, detached/redocked panel and Quit checks passed. Fixed a real bundled ELK cleanup crash discovered during native acceptance, with RED→GREEN regression. Final UI50, browser10 functional rerun, earlier full11 including100k, Rust95/probe4/native8, contracts/typecheck/macOS bundle pass. [Evidence and limits](../architecture/compact-workspace-results.md). T6 pending native acceptance is closed; T3a remains at its existing adapter-probe checkpoint. Local commit only.
+
+
+## T3a — implementation complete, native manual acceptance pending
+
+Semantic C#/TypeScript/Python adapters, snapshot-bound references, compact declaration lenses, grouped relations and comparison-derived changed locations, pinned navigation/Back and native command forwarding are implemented. Stronger explained-block highlighting and recorded frame-local inline values are included. Review findings and hidden-worktree snapshot provenance regression corrected. Automated regression and packaged all-language host smoke pass; exact native UI acceptance awaits Mac unlock. [T3a results, counts and explicit runtime/scope limits](../architecture/t3a-results.md). Local commits only; T6a not started.

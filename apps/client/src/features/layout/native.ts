@@ -11,6 +11,10 @@ export const closePanel = (panel: PanelId) =>
   invoke<void>("close_panel", { panel });
 export const listPanels = () => invoke<PanelId[]>("list_panels");
 export type PanelActionName =
+  | "relations_load"
+  | "relations_show"
+  | "relation_location"
+  | "relations_back"
   | "learning_mode"
   | "learning_refresh"
   | "learning_open"

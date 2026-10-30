@@ -1,9 +1,13 @@
 import { createPortal } from "react-dom";
 import { Dialog } from "../commands/CommandUI";
 import React, { useEffect, useRef, useState } from "react";
+import { teachingModel, teachingDecorations } from "./teaching-overlays";
+import { relationLenses } from "../relations/model";
 import { EditorState, Compartment } from "@codemirror/state";
 import {
   EditorView,
+  Decoration,
+  WidgetType,
   gutter,
   GutterMarker,
   lineNumbers,
@@ -24,6 +28,31 @@ import { python } from "@codemirror/lang-python";
 import { csharp } from "@replit/codemirror-lang-csharp";
 import { tags } from "@lezer/highlight";
 import type { CodeTab, Workspace } from "../../workspace";
+const savedPositions = new Map<
+  string,
+  { side: "Old" | "New"; anchor: number; head: number }
+>();
+class RelationsWidget extends WidgetType {
+  constructor(
+    readonly label: string,
+    readonly name: string,
+    readonly open: () => void,
+  ) {
+    super();
+  }
+  toDOM() {
+    const b = document.createElement("button");
+    b.className = "code-relations-lens";
+    b.textContent = this.label;
+    b.setAttribute("aria-label", `Relations for ${this.name}: ${this.label}`);
+    b.onclick = this.open;
+    b.onmousedown = (event) => event.preventDefault();
+    return b;
+  }
+  ignoreEvent() {
+    return true;
+  }
+}
 class ExplanationMarker extends GutterMarker {
   constructor(
     readonly summary: string,
@@ -79,7 +108,13 @@ export function CodeReader({
   const parent = useRef<HTMLDivElement>(null);
   const editor = useRef<EditorView | null>(null);
   const markerEditors = useRef<
-    { view: EditorView; side: "Old" | "New"; compartment: Compartment }[]
+    {
+      view: EditorView;
+      side: "Old" | "New";
+      compartment: Compartment;
+      teaching: Compartment;
+      relations: Compartment;
+    }[]
   >([]);
   const selected = useRef<{ side: "Old" | "New"; start: number; end: number }>({
     side: "New",
@@ -109,9 +144,14 @@ export function CodeReader({
         : /\.[cm]?[jt]sx?$/.test(tab.path.display)
           ? javascript({ typescript: true, jsx: true })
           : [];
+    const positionKey = JSON.stringify([tab.id, tab.data.comparison.id]);
     const compartments = { Old: new Compartment(), New: new Compartment() };
+    const teaching = { Old: new Compartment(), New: new Compartment() };
+    const relations = { Old: new Compartment(), New: new Compartment() };
     const extension = (side: "Old" | "New") => [
       compartments[side].of([]),
+      teaching[side].of([]),
+      relations[side].of([]),
       EditorState.readOnly.of(true),
       EditorView.editable.of(false),
       EditorView.contentAttributes.of({
@@ -154,6 +194,13 @@ export function CodeReader({
       EditorView.updateListener.of((u) => {
         if (u.selectionSet) {
           const s = u.state.selection.main;
+          savedPositions.set(positionKey, {
+            side,
+            anchor: s.anchor,
+            head: s.head,
+          });
+          if (savedPositions.size > 64)
+            savedPositions.delete(savedPositions.keys().next().value!);
           selected.current = {
             side,
             start: u.state.doc.lineAt(s.from).number,
@@ -174,8 +221,20 @@ export function CodeReader({
       });
       views = [merge.a, merge.b];
       markerEditors.current = [
-        { view: merge.a, side: "Old", compartment: compartments.Old },
-        { view: merge.b, side: "New", compartment: compartments.New },
+        {
+          view: merge.a,
+          side: "Old",
+          compartment: compartments.Old,
+          teaching: teaching.Old,
+          relations: relations.Old,
+        },
+        {
+          view: merge.b,
+          side: "New",
+          compartment: compartments.New,
+          teaching: teaching.New,
+          relations: relations.New,
+        },
       ];
       editor.current = b.state === "Absent" ? merge.a : merge.b;
       cleanup = () => merge.destroy();
@@ -206,6 +265,8 @@ export function CodeReader({
           view: v,
           side: removed ? "Old" : "New",
           compartment: removed ? compartments.Old : compartments.New,
+          teaching: removed ? teaching.Old : teaching.New,
+          relations: removed ? relations.Old : relations.New,
         },
       ];
       editor.current = v;
@@ -216,6 +277,17 @@ export function CodeReader({
       start: 1,
       end: 1,
     };
+    const saved = savedPositions.get(positionKey);
+    const savedEditor = markerEditors.current.find(
+      (e) => e.side === saved?.side,
+    )?.view;
+    if (saved && savedEditor)
+      savedEditor.dispatch({
+        selection: {
+          anchor: Math.min(saved.anchor, savedEditor.state.doc.length),
+          head: Math.min(saved.head, savedEditor.state.doc.length),
+        },
+      });
     const restore = requestAnimationFrame(() =>
       views.forEach((v) => {
         v.scrollDOM.scrollTop = tab.scroll;
@@ -298,6 +370,80 @@ export function CodeReader({
       });
     }
   }, [workspace.state.explanations, tab.data, view, light, ignoreWhitespace]);
+  useEffect(() => {
+    for (const entry of markerEditors.current) {
+      entry.view.dispatch({
+        effects: entry.teaching.reconfigure(
+          EditorView.decorations.of(
+            teachingDecorations(
+              entry.view.state,
+              teachingModel(workspace, tab, entry.side),
+            ),
+          ),
+        ),
+      });
+    }
+  }, [
+    workspace.state.selection,
+    workspace.state.explanationOpen,
+    workspace.state.learningMode,
+    workspace.state.learningLocation,
+    workspace.state.learningRecord,
+    workspace.state.traceStep,
+    workspace.state.traceFrame,
+    workspace.state.tracePreviousStep,
+    tab.data,
+    view,
+    light,
+    ignoreWhitespace,
+  ]);
+  useEffect(() => {
+    void workspace.loadRelations(false);
+  }, [workspace, tab.id, tab.data.target.id]);
+  useEffect(() => {
+    const r = workspace.state.relations;
+    const report =
+      r?.report?.origin_snapshot_id === tab.data.target.id ? r.report : null;
+    for (const entry of markerEditors.current) {
+      const marks =
+        entry.side === "New"
+          ? relationLenses(report, tab.path, tab)
+              .filter((l) => l.line > 0 && l.line <= entry.view.state.doc.lines)
+              .map((l) =>
+                Decoration.widget({
+                  widget: new RelationsWidget(l.label, l.name, () =>
+                    workspace.showRelations(true, l.symbolId),
+                  ),
+                  block: true,
+                  side: -1,
+                }).range(entry.view.state.doc.line(l.line).from),
+              )
+          : [];
+      entry.view.dispatch({
+        effects: entry.relations.reconfigure(
+          EditorView.decorations.of(Decoration.set(marks, true)),
+        ),
+      });
+    }
+  }, [workspace.state.relations, tab.data, view, light, ignoreWhitespace]);
+  useEffect(() => {
+    const target = workspace.state.relationLocation,
+      v = editor.current;
+    if (
+      !target ||
+      !v ||
+      target.snapshotId !== tab.data.target.id ||
+      target.path.raw_base64 !== tab.path.raw_base64
+    )
+      return;
+    const line = v.state.doc.line(Math.min(v.state.doc.lines, target.line));
+    const pos = Math.min(line.to, line.from + Math.max(0, target.column - 1));
+    v.dispatch({
+      selection: { anchor: pos },
+      effects: EditorView.scrollIntoView(pos, { y: "center" }),
+    });
+    v.focus();
+  }, [workspace.state.relationLocation, tab.data, view]);
   const file = tab.data.target.files.find(
     (f) => f.path.raw_base64 === tab.path.raw_base64,
   )!;
@@ -362,6 +508,14 @@ export function CodeReader({
   };
   const actions = (
     <div className="reader-actions">
+      {workspace.state.relationBack && (
+        <button
+          onClick={() => workspace.backFromRelations()}
+          title="Return to the original code and selection"
+        >
+          ← Back
+        </button>
+      )}
       <button onClick={() => setActionsOpen(true)}>Code actions</button>{" "}
       <button
         className="explain-button"
@@ -389,7 +543,14 @@ export function CodeReader({
       {actionsOpen && (
         <Dialog title="Code actions" onClose={() => setActionsOpen(false)}>
           <div className="editor-settings">
-            {" "}
+            <button
+              onClick={() => {
+                setActionsOpen(false);
+                void workspace.loadRelations(true);
+              }}
+            >
+              Usages and relationships…
+            </button>{" "}
             {canStage && (
               <>
                 <button

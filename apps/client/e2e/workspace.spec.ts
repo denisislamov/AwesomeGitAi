@@ -185,7 +185,10 @@ test("historical root commit and snapshot comparison keep working tab intact", a
     .getByRole("button", { name: "Open repository", exact: true })
     .click();
   await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
-  const working = await page.locator(".cm-content").textContent();
+  const sourceText = async () =>
+    (await page.locator(".cm-content .cm-line").allTextContents()).join("\n");
+  await expect(page.locator(".cm-content")).toContainText("Wallet");
+  const working = await sourceText();
   await page.locator(".revision-details summary").click();
   const ids = [
     await page.getByTestId("base-version-id").textContent(),
@@ -202,7 +205,7 @@ test("historical root commit and snapshot comparison keep working tab intact", a
     "Empty tree",
   );
   await page.getByRole("tab", { name: /Code.cs Worktree/ }).click();
-  await expect(page.locator(".cm-content")).toHaveText(working!);
+  await expect.poll(sourceText).toBe(working);
   await page.getByRole("button", { name: "View options", exact: true }).click();
   await page.getByRole("button", { name: "Snapshots", exact: true }).click();
   await page.getByLabel("Base snapshot ID").fill(ids[0]!);
@@ -211,7 +214,7 @@ test("historical root commit and snapshot comparison keep working tab intact", a
   await expect(page.locator(".revision-details summary")).toContainText(
     "Snapshot",
   );
-  await expect(page.locator(".cm-content")).toHaveText(working!);
+  await expect.poll(sourceText).toBe(working);
 });
 
 test("chosen base lists files deleted before the target parent", async ({
@@ -259,6 +262,7 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
     page.getByRole("heading", { name: "Начальный баланс 75", exact: true }),
   ).toBeVisible();
   await page.getByTitle(/Начальный баланс 75/).click();
+  await expect(page.locator(".cm-explained-line")).toHaveCount(1);
   await expect(page.getByTestId("explanation-target")).toContainText(
     "lines 2–2",
   );
@@ -390,11 +394,21 @@ test("real MCP trace, call stack, pinned code and diagram", async ({
   await expect(page.getByLabel("New code version")).toContainText(
     "resource -= cost",
   );
+  await expect(page.locator(".cm-trace-line")).toHaveCount(1);
+  await expect(
+    page.locator(".cm-recorded-value").filter({ hasText: "= 30" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".cm-recorded-value").filter({ hasText: "= 20" }),
+  ).toBeVisible();
   const phase = await trace.locator(".trace-phase").textContent();
   await trace
     .getByRole("button", { name: "TryDash · Dash.cs:10", exact: true })
     .click();
   await expect(trace.locator(".trace-phase")).toHaveText(phase!);
+  await expect(
+    page.locator(".cm-recorded-value").filter({ hasText: "resource =" }),
+  ).toHaveCount(0);
   await expect(page.getByLabel("New code version")).toContainText(
     "resources.TrySpend",
   );
@@ -420,6 +434,8 @@ test("real MCP trace, call stack, pinned code and diagram", async ({
   );
   await page.getByRole("button", { name: "Diagram", exact: true }).click();
   await page.getByLabel("Recorded learning artifact").selectOption(ids.diagram);
+  await expect(page.locator(".cm-trace-line")).toHaveCount(0);
+  await expect(page.locator(".cm-recorded-value")).toHaveCount(0);
   await expect(page.locator(".react-flow__node")).toHaveCount(3);
   await expect(
     page.getByRole("region", { name: "Dependency diagram" }),
@@ -437,9 +453,103 @@ test("real MCP trace, call stack, pinned code and diagram", async ({
   await page.getByRole("button", { name: "Steps", exact: true }).click();
   await page.getByRole("button", { name: "Diagram", exact: true }).click();
   await page.getByLabel("Recorded learning artifact").selectOption(ids.diagram);
+  await expect(page.locator(".cm-trace-line")).toHaveCount(0);
+  await expect(page.locator(".cm-recorded-value")).toHaveCount(0);
   await expect(page.locator(".react-flow__node")).toHaveCount(3);
   await page.screenshot({
     path: "../../.superpowers/t6-learning-ui.png",
     fullPage: true,
   });
 });
+
+for (const language of ["ts", "cs"])
+  test(`real semantic adapter ${language}: lens, grouped references, pinned navigation and Back`, async ({
+    page,
+    request,
+  }) => {
+    const info = await (await request.get("/test-relations")).json();
+    await page.goto("/e2e/");
+    await page.getByRole("button", { name: "Choose repository" }).click();
+    await page.getByLabel("Repository path").fill(info.repo);
+    await page
+      .getByRole("button", { name: "Open repository", exact: true })
+      .click();
+    await page.getByRole("button", { name: "All files", exact: true }).click();
+    await page
+      .getByRole("button", { name: `File Relations.${language}`, exact: true })
+      .click();
+    const symbol = language === "ts" ? "spend" : "Spend";
+    const lens = page.getByRole("button", {
+      name: new RegExp(`Relations for ${symbol}:`),
+    });
+    await expect(lens).toBeVisible({ timeout: 20000 });
+    await expect(lens).toContainText("found · partial");
+    await page
+      .locator(".cm-line")
+      .filter({ hasText: "return cost + 1" })
+      .click();
+    await page.keyboard.press("Home");
+    await page.keyboard.press("Shift+End");
+    const selectedText = await page.evaluate(() =>
+      window.getSelection()?.toString(),
+    );
+    expect(selectedText).toContain("return cost + 1");
+    await page
+      .getByRole("button", { name: "Explain selection", exact: true })
+      .click();
+    const selection = await page
+      .getByTestId("explanation-target")
+      .textContent();
+    await page.locator(".revision-details summary").click();
+    const sourceSnapshot = await page
+      .getByTestId("target-version-id")
+      .textContent();
+    await page.locator(".revision-details summary").click();
+    await lens.click();
+    const dialog = page.getByRole("dialog", { name: "Code relations" });
+    await expect(dialog).toContainText("Partial");
+    const reference = dialog
+      .locator(".relation-reference")
+      .filter({ hasText: `Usage.${language}` })
+      .filter({ hasText: "20" })
+      .first();
+    await expect(reference).toContainText("20");
+    await reference.click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByLabel("New code version")).toContainText(
+      language === "ts" ? "spend(20)" : "Spend(20)",
+    );
+    await expect(page.locator(".revision-details summary")).toContainText(
+      "Recorded version",
+    );
+    await page.locator(".revision-details summary").click();
+    await expect(page.getByTestId("base-version-id")).not.toHaveText(
+      sourceSnapshot!,
+    );
+    await page.locator(".revision-details summary").click();
+    await page.getByRole("button", { name: "← Back", exact: true }).click();
+    await expect(page.getByTestId("explanation-target")).toHaveText(selection!);
+    await page.locator(".cm-content").focus();
+    await expect
+      .poll(() => page.evaluate(() => window.getSelection()?.toString()))
+      .toBe(selectedText);
+    await page.locator(".revision-details summary").click();
+    await expect(page.getByTestId("target-version-id")).toHaveText(
+      sourceSnapshot!,
+    );
+    await page.locator(".revision-details summary").click();
+    await page
+      .getByRole("button", { name: "File Notes.txt", exact: true })
+      .click();
+    await expect(page.getByLabel("New code version")).toContainText(
+      "unsupported language fixture",
+    );
+    await page
+      .getByRole("button", { name: "Code actions", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Usages and relationships…", exact: true })
+      .click();
+    await expect(dialog).toContainText("Reference count unknown.");
+    await expect(dialog).not.toContainText("0 references");
+  });

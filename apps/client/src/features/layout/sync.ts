@@ -67,6 +67,46 @@ export async function dispatchPanelAction(
     return;
   const tab = w.active();
   switch (message.action) {
+    case "relations_load":
+      if (
+        message.panel === "code" &&
+        tab &&
+        p.comparisonId === tab.data.comparison.id &&
+        typeof p.open === "boolean"
+      )
+        await w.loadRelations(
+          p.open,
+          typeof p.symbolId === "string" ? p.symbolId : null,
+        );
+      break;
+    case "relations_show":
+      if (
+        message.panel === "code" &&
+        p.key === w.state.relations?.key &&
+        typeof p.open === "boolean"
+      )
+        w.showRelations(
+          p.open,
+          typeof p.symbolId === "string" ? p.symbolId : null,
+        );
+      break;
+    case "relation_location":
+      if (
+        message.panel === "code" &&
+        p.key === w.state.relations?.key &&
+        object(p.path) &&
+        typeof p.path.raw_base64 === "string" &&
+        Number.isSafeInteger(p.line) &&
+        p.line > 0 &&
+        Number.isSafeInteger(p.column) &&
+        p.column > 0
+      )
+        await w.openRelationLocation(p.path as RepoPath, p.line, p.column);
+      break;
+    case "relations_back":
+      if (message.panel === "code" && p.tabId === w.state.relationBack?.tab.id)
+        w.backFromRelations();
+      break;
     case "learning_mode":
       if (["explanation", "trace", "diagram"].includes(p.mode))
         w.setLearningMode(p.mode);
@@ -352,6 +392,33 @@ export class DetachedWorkspace extends Workspace {
       base,
       target,
       refresh,
+    });
+  }
+  override async loadRelations(open = false, symbolId: string | null = null) {
+    await this.action("relations_load", {
+      open,
+      symbolId,
+      comparisonId: this.active()?.data.comparison.id,
+    });
+  }
+  override showRelations(open: boolean, symbolId: string | null = null) {
+    void this.action("relations_show", {
+      open,
+      symbolId,
+      key: this.state.relations?.key,
+    });
+  }
+  override async openRelationLocation(path: RepoPath, line = 1, column = 1) {
+    await this.action("relation_location", {
+      path,
+      line,
+      column,
+      key: this.state.relations?.key,
+    });
+  }
+  override backFromRelations() {
+    void this.action("relations_back", {
+      tabId: this.state.relationBack?.tab.id,
     });
   }
   override activate(id: string) {

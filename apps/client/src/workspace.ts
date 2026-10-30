@@ -21,6 +21,7 @@ import type {
   LearningItem,
   LearningRecord,
   SourceLocation,
+  CodeRelationsReport,
 } from "../../../packages/api/src/generated";
 export interface WorkspaceApi {
   read(request: ReadRequest): Promise<ReadResponse>;
@@ -47,7 +48,29 @@ export type CodeTab = {
   scroll: number;
   stale: boolean;
 };
+export type RelationsState = {
+  key: string;
+  snapshotId: string;
+  path: RepoPath;
+  loading: boolean;
+  report: CodeRelationsReport | null;
+  error: string | null;
+  open: boolean;
+  symbolId: string | null;
+};
 type State = {
+  relations: RelationsState | null;
+  relationBack: {
+    tab: CodeTab;
+    selection: CodeSelection | null;
+    relations: RelationsState;
+  } | null;
+  relationLocation: {
+    snapshotId: string;
+    path: RepoPath;
+    line: number;
+    column: number;
+  } | null;
   learningMode: "explanation" | "trace" | "diagram";
   learningItems: LearningItem[];
   learningRecord: LearningRecord | null;
@@ -100,6 +123,9 @@ export const revisionLabel = (r: Revision): string =>
       : `Snapshot ${r.Snapshot.id.slice(0, 8)}`;
 export class Workspace {
   state: State = {
+    relations: null,
+    relationBack: null,
+    relationLocation: null,
     learningMode: "explanation",
     learningItems: [],
     learningRecord: null,
@@ -138,6 +164,8 @@ export class Workspace {
   private learningRequest = 0;
   private learningNavigation = 0;
   private opening = 0;
+  private relationsRequest = 0;
+  private relationNavigation = 0;
   constructor(readonly api: WorkspaceApi) {}
   subscribe = (f: () => void) => {
     this.listeners.add(f);
@@ -160,7 +188,14 @@ export class Workspace {
   async openRepository(path: string) {
     let epoch = ++this.epoch;
     ++this.opening;
-    this.patch({ busy: true, error: null, openingRepository: true });
+    this.patch({
+      busy: true,
+      error: null,
+      openingRepository: true,
+      relations: null,
+      relationBack: null,
+      relationLocation: null,
+    });
     try {
       const r = await this.api.desktop({ kind: "OpenRepository", path });
       if (r.kind !== "Repository") throw Error("INVALID_RESPONSE");
@@ -481,6 +516,153 @@ export class Workspace {
   active() {
     return this.state.tabs.find((t) => t.id === this.state.activeTab);
   }
+  /** Request identity includes immutable source snapshot and byte-exact path. */
+  private relationKey(tab: CodeTab) {
+    return JSON.stringify([
+      tab.data.target.repo_id,
+      tab.data.target.worktree_id,
+      tab.data.target.id,
+      tab.path.raw_base64,
+    ]);
+  }
+  async loadRelations(open = false, symbolId: string | null = null) {
+    const tab = this.active();
+    if (!tab || !this.state.repo || this.state.openingRepository) return;
+    const key = this.relationKey(tab);
+    if (
+      this.state.relations?.key === key &&
+      (this.state.relations.loading || this.state.relations.report)
+    ) {
+      if (open) this.showRelations(true, symbolId);
+      return;
+    }
+    const epoch = this.epoch,
+      request = ++this.relationsRequest;
+    const current = () =>
+      epoch === this.epoch &&
+      request === this.relationsRequest &&
+      this.active() &&
+      this.relationKey(this.active()!) === key;
+    this.patch({
+      relations: {
+        key,
+        snapshotId: tab.data.target.id,
+        path: tab.path,
+        loading: true,
+        report: null,
+        error: null,
+        open,
+        symbolId,
+      },
+    });
+    try {
+      const result = await this.api.desktop({
+        kind: "CodeRelations",
+        scope: this.scope(),
+        snapshot_id: tab.data.target.id,
+        path: tab.path,
+      });
+      if (!current()) return;
+      if (
+        result.kind !== "CodeRelations" ||
+        result.report.origin_snapshot_id !== tab.data.target.id
+      )
+        throw Error("RELATIONS_SNAPSHOT_MISMATCH");
+      this.patch({
+        relations: {
+          ...this.state.relations!,
+          loading: false,
+          report: result.report,
+        },
+      });
+    } catch (error) {
+      if (current())
+        this.patch({
+          relations: {
+            ...this.state.relations!,
+            loading: false,
+            error: String(error),
+          },
+        });
+    } finally {
+      if (
+        epoch === this.epoch &&
+        request === this.relationsRequest &&
+        !current() &&
+        this.state.relations?.key === key
+      )
+        this.patch({
+          relations: { ...this.state.relations, loading: false, open: false },
+        });
+    }
+  }
+  showRelations(open: boolean, symbolId: string | null = null) {
+    if (this.state.relations)
+      this.patch({ relations: { ...this.state.relations, open, symbolId } });
+  }
+  async openRelationLocation(path: RepoPath, line = 1, column = 1) {
+    const report = this.state.relations?.report,
+      tab = this.active();
+    if (!report || !tab || this.state.openingRepository) return;
+    const samePath = (p: RepoPath) => p.raw_base64 === path.raw_base64;
+    const allowed =
+      (line === 1 && column === 1 && report.files.some(samePath)) ||
+      report.symbols.some(
+        (s) =>
+          (samePath(s.path) && s.line === line && s.column === column) ||
+          s.references.some(
+            (r) => samePath(r.path) && r.line === line && r.column === column,
+          ),
+      );
+    if (!allowed) return;
+    const epoch = this.epoch,
+      navigation = ++this.relationNavigation;
+    if (!this.state.relationBack)
+      this.patch({
+        relationBack: {
+          tab: { ...tab },
+          selection: this.state.selection,
+          relations: this.state.relations!,
+        },
+      });
+    this.showRelations(false);
+    const revision = { Snapshot: { id: report.snapshot_id } };
+    await this.openFile(path, revision, revision);
+    const active = this.active();
+    if (
+      epoch === this.epoch &&
+      navigation === this.relationNavigation &&
+      active?.data.target.id === report.snapshot_id &&
+      samePath(active.path)
+    )
+      this.patch({
+        relationLocation: {
+          snapshotId: report.snapshot_id,
+          path,
+          line,
+          column,
+        },
+      });
+  }
+  backFromRelations() {
+    const back = this.state.relationBack;
+    if (!back || this.state.openingRepository) return;
+    ++this.opening;
+    ++this.relationNavigation;
+    ++this.relationsRequest;
+    const tabs = this.state.tabs.filter((t) => t.id !== back.tab.id);
+    if (tabs.length >= 12) tabs.shift();
+    this.patch({
+      tabs: [...tabs, back.tab],
+      activeTab: back.tab.id,
+      selection: back.selection,
+      relations: { ...back.relations, open: false },
+      relationLocation: null,
+      relationBack: null,
+      busy: false,
+    });
+    void this.refreshExplanations();
+  }
   async openFile(
     path: RepoPath,
     base: Revision = "Index",
@@ -491,6 +673,7 @@ export class Workspace {
     const scope = this.scope();
     const epoch = this.epoch;
     const serial = ++this.opening;
+    this.showRelations(false);
     const id = JSON.stringify([path.raw_base64, base, target]);
     const existing = this.state.tabs.find((t) => t.id === id);
     if (existing && !refresh) {
@@ -529,6 +712,7 @@ export class Workspace {
       this.patch({
         tabs: [...tabs, tab],
         activeTab: id,
+        relationLocation: null,
         explanations: [],
         explanationsTruncated: false,
         selection: null,
@@ -541,8 +725,10 @@ export class Workspace {
   }
   activate(id: string) {
     ++this.opening;
+    this.showRelations(false);
     this.patch({
       activeTab: id,
+      relationLocation: null,
       selection: null,
       busy: false,
       explanations: [],
@@ -551,6 +737,7 @@ export class Workspace {
     void this.refreshExplanations();
   }
   close(id: string) {
+    this.showRelations(false);
     const tabs = this.state.tabs.filter((t) => t.id !== id);
     this.patch({
       tabs,

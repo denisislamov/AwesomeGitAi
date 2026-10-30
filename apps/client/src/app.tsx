@@ -1,3 +1,4 @@
+import { RelationsDialog } from "./features/relations/RelationsDialog";
 import React, {
   useEffect,
   useMemo,
@@ -444,6 +445,7 @@ export function App({
                 </button>
               </div>
             )}
+            <RelationsDialog workspace={workspace} />
             <CodeReader
               key={tab.id}
               actionsHost={codeActionsHost}
@@ -751,6 +753,7 @@ export function App({
           </button>
         </header>
         {dialogs}
+
         {dialog !== "git" && <GitJobStatus workspace={workspace} />}
         {bridgeStatus && <div role="status">{bridgeStatus}</div>}
         {s.error && <div role="alert">{s.error}</div>}
@@ -825,6 +828,7 @@ export function App({
       </header>
       <AgentConnection root={s.root} hiddenTrigger />
       {dialogs}
+
       {dialog !== "git" && <GitJobStatus workspace={workspace} />}
       {bridgeStatus && <div role="status">{bridgeStatus}</div>}
       {s.error && (

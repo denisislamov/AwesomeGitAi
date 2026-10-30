@@ -167,12 +167,40 @@ function DecisionCard({
       <h3>{d.summary}</h3>
       <p>{d.behavior}</p>
       <p>{d.rationale}</p>
-      {d.anchors.map((v, i) => (
-        <p className="quiet-note" key={i}>
-          {v.anchor.side === "Old" ? "Before" : "After"} · lines{" "}
-          {v.anchor.start_line}–{v.anchor.end_line} · {label(v.resolution)}
-        </p>
-      ))}
+      {d.anchors.map((v, i) => {
+        const range =
+          typeof v.resolution === "object" ? v.resolution.Relocated : v.anchor;
+        const canHighlight =
+          tab?.path.raw_base64 === v.anchor.path.raw_base64 &&
+          (v.resolution === "Exact" || typeof v.resolution === "object");
+        const caption = (
+          <>
+            {v.anchor.side === "Old" ? "Before" : "After"} · lines{" "}
+            {range.start_line}–{range.end_line} · {label(v.resolution)}
+          </>
+        );
+        return (
+          <p className="quiet-note" key={i}>
+            {canHighlight ? (
+              <button
+                className="anchor-link"
+                title="Highlight explained block"
+                onClick={() =>
+                  workspace.explain(
+                    v.anchor.side,
+                    range.start_line,
+                    range.end_line,
+                  )
+                }
+              >
+                {caption}
+              </button>
+            ) : (
+              caption
+            )}
+          </p>
+        );
+      })}
       {!exact && (
         <>
           <p>
