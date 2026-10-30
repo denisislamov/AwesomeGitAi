@@ -191,11 +191,13 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 **Files:** create `crates/domain/src/{memory.rs,bundle.rs,redaction.rs}`, `crates/domain/tests/bundle.rs`, `apps/client/src/features/memory/MemoryView.tsx`, `apps/client/src/features/export/BundlePreview.tsx`.
 **Interfaces:** produces `MemoryService::search(scope,query,cursor) -> DecisionPage`, `BundleService::preview/export/import(manifest,mapping) -> BundleReport`, `RedactionService::erase(selection) -> RedactionReceipt`.
 
-- [ ] Add failing tests for retained superseded decisions, scope/author filters, FTS rebuild, preview exclusions, import collision/retry, Git object mismatch, ZIP traversal/bomb, malicious HTML, redaction of stored snapshot/event/index. Import leaves worktree/refs unchanged.
-- [ ] Run `cargo test -p agai-domain --test bundle` → FAIL.
-- [ ] Implement versioned zip manifest + explicit selected snapshots, hash validation, bounded decompression, opaque source IDs and reviewed mapping. Reject escaping/absolute paths and unknown major schema; imported human claims keep external provenance. User deletion rewrites sensitive payloads and derived stores, records tombstone; include SQLite WAL/checkpoint and owned backup handling, explain separately exported copies cannot be erased remotely.
-- [ ] Run test → PASS; disable network and read local code/history/explanations/memory/trace; corruption of FTS recovers from events. UI success of export names the selected output, not a promise to synchronize devices.
-- [ ] Commit `feat: add project memory and portable context bundles`.
+- [x] Add failing tests for retained superseded decisions, scope/author filters, FTS rebuild, preview exclusions, import collision/retry, Git object mismatch, ZIP traversal/bomb, malicious HTML, redaction of stored snapshot/event/index. Import leaves worktree/refs unchanged.
+- [x] Run `cargo test -p agai-domain --test bundle` → FAIL.
+- [x] Implement versioned zip manifest + explicit selected snapshots, hash validation, bounded decompression, opaque source IDs and reviewed mapping. Reject escaping/absolute paths and unknown major schema; imported human claims keep external provenance. User deletion rewrites sensitive payloads and derived stores, records tombstone; include SQLite WAL/checkpoint and owned backup handling, explain separately exported copies cannot be erased remotely.
+- [ ] Remaining acceptance: disable OS networking (not performed). Automated tests pass; local-only read/export/import/restart passed. Original check: Run test → PASS; disable network and read local code/history/explanations/memory/trace; corruption of FTS recovers from events. UI success of export names the selected output, not a promise to synchronize devices.
+- [x] Commit `feat: add project memory and portable context bundles`.
+
+Implementation uses one compact MemoryDialog and scope-wide erasure. Search is literal scoped matching with rebuildable derived indices. See [T7 evidence and deviations](../../architecture/t7-results.md).
 
 ## T8 · Headless host и приватный remote API
 

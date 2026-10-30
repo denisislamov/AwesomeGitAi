@@ -18,6 +18,54 @@ impl HostService {
             return Err(AppError::new("SCOPE_DENIED"));
         }
         let response = match request {
+            DesktopRequest::MemorySearch {
+                scope,
+                query,
+                actor,
+                task_id,
+                snapshot_id,
+                path,
+                offset,
+                limit,
+            } => self.memory_search(
+                scope,
+                agai_domain::memory::MemoryFilter {
+                    query,
+                    actor,
+                    task_id,
+                    snapshot_id,
+                    path,
+                    offset,
+                    limit,
+                },
+            )?,
+            DesktopRequest::MemoryCatalog { scope } => self.memory_catalog(scope)?,
+            DesktopRequest::BundlePreview {
+                scope,
+                record_ids,
+                snapshot_ids,
+            } => self.bundle_preview(scope, record_ids, snapshot_ids)?,
+            DesktopRequest::BundleExport {
+                scope,
+                record_ids,
+                snapshot_ids,
+                expected_hash,
+                output_path,
+            } => self.bundle_export(scope, record_ids, snapshot_ids, expected_hash, output_path)?,
+            DesktopRequest::BundleInspect { scope, input_path } => {
+                self.bundle_inspect(scope, input_path)?
+            }
+            DesktopRequest::BundleImport {
+                scope,
+                input_path,
+                expected_hash,
+                confirm_mapping,
+            } => self.bundle_import(scope, input_path, expected_hash, confirm_mapping)?,
+            DesktopRequest::MemoryErase {
+                scope,
+                confirmation,
+            } => self.memory_erase(scope, confirmation)?,
+            DesktopRequest::MemoryRebuild { scope } => self.memory_rebuild(scope)?,
             DesktopRequest::CodeRelations {
                 scope,
                 snapshot_id,
@@ -317,6 +365,15 @@ impl HostService {
             > crate::local_ipc::MAX_FRAME - 1024
         {
             return Err(AppError::new("CAPTURE_TOO_LARGE"));
+        }
+        if let DesktopResponse::MemoryResult { data } = &response {
+            if serde_json::to_vec(data)
+                .map_err(|_| AppError::new("INVALID_DATA"))?
+                .len()
+                > 8 * 1024 * 1024
+            {
+                return Err(AppError::new("MEMORY_RESPONSE_TOO_LARGE"));
+            }
         }
         Ok(response)
     }

@@ -608,9 +608,80 @@ test("language help is optional, snapshot-bound and keyboard accessible on both 
   await expect(dialog).toContainText("learn.microsoft.com");
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 390, height: 850 });
-  await page.getByLabel("Old code version", { exact: true }).click({ button: "right" });
-  await page.getByRole("button", { name: "Explain language construct… ⌘⇧K", exact: true }).click();
+  await page
+    .getByLabel("Old code version", { exact: true })
+    .click({ button: "right" });
+  await page
+    .getByRole("button", {
+      name: "Explain language construct… ⌘⇧K",
+      exact: true,
+    })
+    .click();
   await expect(dialog).toBeVisible();
-  await dialog.getByRole("button", { name: "Close Language construct", exact: true }).click();
+  await dialog
+    .getByRole("button", { name: "Close Language construct", exact: true })
+    .click();
   await expect(dialog).toHaveCount(0);
+});
+
+test("project memory previews, exports, imports and retains external provenance after reload", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  const info = await (await request.get("/test-info")).json();
+  expect((await request.post("/test-mcp-seed")).ok()).toBeTruthy();
+  const open = async () => {
+    await page.goto("/e2e/");
+    await page.getByRole("button", { name: "Choose repository" }).click();
+    await page.getByLabel("Repository path").fill(info.repo);
+    await page
+      .getByRole("button", { name: "Open repository", exact: true })
+      .click();
+    await page.getByRole("button", { name: "View menu", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Project memory…", exact: true })
+      .click();
+  };
+  await open();
+  const memory = page.getByRole("dialog", {
+    name: "Project memory",
+    exact: true,
+  });
+  await expect(memory).toContainText("Начальный баланс 75");
+  await memory.getByRole("button", { name: "Export", exact: true }).click();
+  const record = memory.getByRole("checkbox", {
+    name: "Record Начальный баланс 75",
+    exact: true,
+  });
+  await record.last().check();
+  await expect(
+    memory.getByRole("checkbox", { name: /^Snapshot / }).first(),
+  ).not.toBeChecked();
+  await memory
+    .getByRole("button", { name: "Preview export", exact: true })
+    .click();
+  await expect(
+    memory.getByRole("region", { name: "Export preview" }),
+  ).toBeVisible();
+  const file = info.repo.replace(/\/repo$/, "/memory-context.zip");
+  await memory.getByLabel("Output ZIP path").fill(file);
+  await memory.getByRole("button", { name: "Export ZIP", exact: true }).click();
+  await expect(memory).toContainText("Exported to");
+  await expect(memory).toContainText("/memory-context.zip");
+  await memory.getByRole("button", { name: "Import", exact: true }).click();
+  await memory.getByLabel("Input ZIP path").fill(file);
+  await memory
+    .getByRole("button", { name: "Inspect ZIP", exact: true })
+    .click();
+  await memory.getByRole("checkbox", { name: /Map this bundle/ }).check();
+  await memory.getByRole("button", { name: "Import ZIP", exact: true }).click();
+  await expect(memory.getByRole("status")).toContainText("snapshots as external context");
+  await open();
+  await expect(memory).toContainText("External");
+  await memory
+    .getByRole("button", { name: "Close Project memory", exact: true })
+    .click();
+  await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
+  await expect(page.getByLabel("New code version")).toContainText("75");
 });

@@ -5,6 +5,7 @@ use std::{path::Path, time::Duration};
 
 pub struct Store {
     connection: Connection,
+    path: Option<std::path::PathBuf>,
 }
 impl Store {
     pub fn open(path: &Path) -> Result<Self, String> {
@@ -18,7 +19,7 @@ impl Store {
         let version: u32 = connection
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(|e| e.to_string())?;
-        if version > 3 {
+        if version > 4 {
             return Err("UNSUPPORTED_VERSION".into());
         }
         if version == 1 || version == 2 {
@@ -47,7 +48,13 @@ impl Store {
         connection
             .execute_batch(include_str!("../migrations/003.sql"))
             .map_err(|e| e.to_string())?;
-        Ok(Self { connection })
+        connection
+            .execute_batch(include_str!("../migrations/004.sql"))
+            .map_err(|e| e.to_string())?;
+        Ok(Self {
+            connection,
+            path: Some(path.to_path_buf()),
+        })
     }
 
     /// Returns only after the event and its bytes commit together.
@@ -102,3 +109,6 @@ mod events;
 
 mod documents;
 pub use documents::DocumentChange;
+
+mod memory;
+pub use memory::*;

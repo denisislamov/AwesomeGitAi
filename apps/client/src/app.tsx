@@ -1,3 +1,4 @@
+import { MemoryDialog } from "./features/memory/MemoryDialog";
 import { RelationsDialog } from "./features/relations/RelationsDialog";
 import React, {
   useEffect,
@@ -63,7 +64,7 @@ export function App({
   const [source, setSource] = useState("");
   const [create, setCreate] = useState(false);
   const [dialog, setDialog] = useState<
-    "repository" | "git" | "appearance" | "editor" | null
+    "repository" | "git" | "appearance" | "editor" | "memory" | null
   >(null);
   const [gitSection, setGitSection] = useState<
     "commit" | "branches" | "remotes"
@@ -109,6 +110,7 @@ export function App({
       }
     } else if (id === "appearance") setDialog("appearance");
     else if (id === "editor-options") setDialog("editor");
+    else if (id === "memory") setDialog("memory");
     else if (id === "panels") setLayoutOpen(true);
     else if (id === "agent-connect")
       document
@@ -491,6 +493,16 @@ export function App({
   };
   const dialogs = (
     <>
+      {dialog === "memory" && (
+        <MemoryDialog
+          workspace={workspace}
+          onClose={() => setDialog(null)}
+          onErased={() => {
+            workspace.clearStoredContext();
+            void workspace.openRepository(s.root);
+          }}
+        />
+      )}
       {dialog === "editor" && (
         <Dialog
           error={s.error || undefined}
@@ -812,6 +824,9 @@ export function App({
               </button>
             </CommandMenu>
             <CommandMenu label="View">
+              <button onClick={() => commandRef.current("memory")}>
+                Project memory…
+              </button>
               <button onClick={() => commandRef.current("editor-options")}>
                 Editor options…
               </button>

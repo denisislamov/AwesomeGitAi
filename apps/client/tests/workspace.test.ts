@@ -302,3 +302,22 @@ it("discards late explanation results after switching files", async () => {
   await pending;
   expect(w.state.explanationsTruncated).toBe(false);
 });
+
+it("clears stored context immediately even if reopening fails after erasure", async () => {
+  const w = new Workspace({
+    read: async () => {
+      throw Error("offline");
+    },
+    desktop: async () => {
+      throw Error("offline");
+    },
+  });
+  w.state.tabs = [{ id: "secret" } as any];
+  w.state.explanations = [{ id: "secret" } as any];
+  w.state.learningItems = [{ id: "secret" } as any];
+  w.clearStoredContext();
+  await w.openRepository("/gone");
+  expect(w.state.tabs).toEqual([]);
+  expect(w.state.explanations).toEqual([]);
+  expect(w.state.learningItems).toEqual([]);
+});

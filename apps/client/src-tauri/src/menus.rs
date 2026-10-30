@@ -25,6 +25,7 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
             "View",
             vec![
                 ("editor-options", "Editor Options…", None),
+                ("memory", "Project Memory…", None),
                 ("panels", "Panels…", None),
                 ("appearance", "Appearance…", None),
             ],
@@ -62,6 +63,7 @@ pub fn install(app: &tauri::AppHandle) -> tauri::Result<()> {
             "git-remotes",
             "agent-connect",
             "editor-options",
+            "memory",
             "panels",
             "appearance",
         ]

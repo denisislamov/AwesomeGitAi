@@ -364,6 +364,48 @@ pub struct BranchRef {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum DesktopRequest {
+    MemorySearch {
+        scope: RepoScope,
+        query: Option<String>,
+        actor: Option<String>,
+        task_id: Option<String>,
+        snapshot_id: Option<String>,
+        path: Option<String>,
+        offset: u32,
+        limit: u32,
+    },
+    MemoryCatalog {
+        scope: RepoScope,
+    },
+    BundlePreview {
+        scope: RepoScope,
+        record_ids: Vec<String>,
+        snapshot_ids: Vec<Uuid>,
+    },
+    BundleExport {
+        scope: RepoScope,
+        record_ids: Vec<String>,
+        snapshot_ids: Vec<Uuid>,
+        expected_hash: String,
+        output_path: String,
+    },
+    BundleInspect {
+        scope: RepoScope,
+        input_path: String,
+    },
+    BundleImport {
+        scope: RepoScope,
+        input_path: String,
+        expected_hash: String,
+        confirm_mapping: bool,
+    },
+    MemoryErase {
+        scope: RepoScope,
+        confirmation: String,
+    },
+    MemoryRebuild {
+        scope: RepoScope,
+    },
     CodeRelations {
         scope: RepoScope,
         snapshot_id: Uuid,
@@ -450,6 +492,10 @@ pub struct DesktopEnvelope {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind")]
 pub enum DesktopResponse {
+    MemoryResult {
+        #[ts(type = "unknown")]
+        data: serde_json::Value,
+    },
     CodeRelations {
         report: CodeRelationsReport,
     },

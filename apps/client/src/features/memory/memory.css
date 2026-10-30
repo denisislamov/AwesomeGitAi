@@ -1,0 +1,74 @@
+.memory-content {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.memory-content p {
+  margin: 0;
+}
+.memory-scope {
+  overflow-wrap: anywhere;
+}
+.memory-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.memory-content label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.memory-content label:has(input[type="checkbox"]) {
+  flex-direction: row;
+  align-items: start;
+}
+.memory-content fieldset {
+  display: grid;
+  gap: 8px;
+  max-height: 180px;
+  overflow: auto;
+}
+.memory-records {
+  display: grid;
+  gap: 8px;
+}
+.memory-records > details {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+.memory-content summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.memory-content pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12px;
+}
+.memory-content dl {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 6px;
+}
+.memory-content dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.memory-provenance {
+  border-left: 3px solid var(--border);
+  padding: 8px;
+}
+.memory-content label {
+  overflow-wrap: anywhere;
+}
+.memory-content input[type="checkbox"] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}

@@ -185,6 +185,33 @@ export class Workspace {
       busy: false,
     });
   }
+  clearStoredContext() {
+    ++this.epoch;
+    ++this.opening;
+    ++this.learningRequest;
+    ++this.learningNavigation;
+    ++this.relationsRequest;
+    ++this.relationNavigation;
+    this.patch({
+      tabs: [],
+      activeTab: null,
+      selection: null,
+      explanations: [],
+      explanationsTruncated: false,
+      explanationsError: null,
+      learningItems: [],
+      learningRecord: null,
+      learningLocation: null,
+      traceStep: null,
+      traceFrame: null,
+      tracePreviousStep: null,
+      relations: null,
+      relationBack: null,
+      relationLocation: null,
+      gitPreview: null,
+      busy: false,
+    });
+  }
   async openRepository(path: string) {
     let epoch = ++this.epoch;
     ++this.opening;
