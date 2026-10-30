@@ -49,3 +49,5 @@ Final independent review's two important issues were fixed with RED→GREEN regr
 Backend commit: `1d5d113 feat: record agent decisions through MCP`. Final compact bundle is built; Documents access after unsigned rebuild awaits a new macOS permission (TCC confirmed), and a subsequent Mac lock blocked the final visual pass. Temporary-repository bundled MCP succeeds. Earlier native window and Quit acceptance remains recorded; no second-monitor or IDE-product certification is implied.
 
 Desktop/UI commit: `070d65b feat: add snapshot explanations and compact detachable IDE panels`. Final `pnpm test` builds fresh host/gateway before testing: workspace 73 + client32 + probe4 pass; native8 separately pass. Full browser9 pass; final MCP-fixture rerun passes. Working scope remains macOS development build; OS permission follow-up above is explicit.
+
+T4 native follow-up: user approved Documents and unlocked Mac. Final compact bundle repository/code/explanation/detach/redock/original Accepted mark verified. Previous TCC/lock item closed. T5 starts next, macOS only; tests/regression/local commits authorized. Docking/detaching remains a primary workflow.
