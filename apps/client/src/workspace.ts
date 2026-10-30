@@ -11,6 +11,8 @@ import type {
   Side,
   DecisionView,
   ReviewState,
+  GitAction,
+  GitJob,
 } from "../../../packages/api/src/generated";
 export interface WorkspaceApi {
   read(request: ReadRequest): Promise<ReadResponse>;
@@ -38,6 +40,16 @@ export type CodeTab = {
   stale: boolean;
 };
 type State = {
+  gitJob: GitJob | null;
+  gitStarting: boolean;
+  gitRemotes: string[];
+  gitPreview: {
+    id: string;
+    before: string;
+    after: string;
+    generation: string;
+    path: string;
+  } | null;
   explanations: DecisionView[];
   explanationsTruncated: boolean;
   explanationsError: string | null;
@@ -73,6 +85,10 @@ export const revisionLabel = (r: Revision): string =>
       : `Снимок ${r.Snapshot.id.slice(0, 8)}`;
 export class Workspace {
   state: State = {
+    gitJob: null,
+    gitStarting: false,
+    gitRemotes: [],
+    gitPreview: null,
     explanations: [],
     explanationsTruncated: false,
     explanationsError: null,
@@ -127,6 +143,8 @@ export class Workspace {
       if (epoch !== this.epoch) return;
       epoch = ++this.epoch; // Accepting a new scope invalidates every old-scope request.
       this.patch({
+        gitPreview: null,
+        gitRemotes: [],
         openingRepository: false,
         repo: r.state,
         root: r.root,
@@ -145,6 +163,7 @@ export class Workspace {
         historyStale: false,
         historyBusy: false,
       });
+      void this.refreshRemotes();
       const [files, history] = await Promise.all([
         this.api.desktop({
           kind: "ListFiles",
@@ -172,6 +191,137 @@ export class Workspace {
     } finally {
       if (epoch === this.epoch) this.patch({ openingRepository: false });
     }
+  }
+  async refreshRemotes() {
+    if (!this.state.repo) return;
+    const epoch = this.epoch;
+    try {
+      const r = await this.api.desktop({
+        kind: "GitRemotes",
+        scope: this.scope(),
+      });
+      if (epoch === this.epoch && r.kind === "GitRemotes")
+        this.patch({ gitRemotes: r.names });
+    } catch (e) {
+      if (epoch === this.epoch) this.error(e);
+    }
+  }
+  async runGit(action: GitAction) {
+    if (
+      !this.state.repo ||
+      this.state.openingRepository ||
+      this.state.gitStarting ||
+      this.state.gitJob?.status === "Running"
+    )
+      return;
+    const expected_generation = this.state.repo.generation;
+    this.patch({ gitStarting: true, error: null });
+    try {
+      const r = await this.api.desktop({
+        kind: "GitStart",
+        scope: this.scope(),
+        expected_generation,
+        action,
+      });
+      if (r.kind !== "GitJob") throw Error("INVALID_RESPONSE");
+      this.patch({ gitJob: r.job, gitPreview: null });
+    } catch (e) {
+      this.error(e);
+    } finally {
+      this.patch({ gitStarting: false });
+    }
+  }
+  async createRepository(path: string, source: string | null) {
+    if (this.state.gitStarting || this.state.gitJob?.status === "Running")
+      return;
+    this.patch({ gitStarting: true, error: null });
+    try {
+      const r = await this.api.desktop({
+        kind: "CreateRepository",
+        path,
+        source,
+      });
+      if (r.kind !== "GitJob") throw Error("INVALID_RESPONSE");
+      this.patch({ gitJob: r.job });
+    } catch (e) {
+      this.error(e);
+    } finally {
+      this.patch({ gitStarting: false });
+    }
+  }
+  async pollGit() {
+    const job = this.state.gitJob;
+    if (!job || job.status !== "Running") return;
+    try {
+      const r = await this.api.desktop({ kind: "GitPoll", id: job.id });
+      if (r.kind !== "GitJob" || this.state.gitJob?.id !== job.id) return;
+      this.patch({ gitJob: r.job });
+      if (r.job.status !== "Running" && this.state.root === r.job.root) {
+        await this.poll();
+        await this.refreshHistory();
+        void this.refreshRemotes();
+      }
+    } catch (e) {
+      this.error(e);
+    }
+  }
+  async cancelGit() {
+    const id = this.state.gitJob?.id;
+    if (id)
+      try {
+        await this.api.desktop({ kind: "GitCancel", id });
+      } catch (e) {
+        this.error(e);
+      }
+  }
+  async prepareSelection(old_lines: number[], new_lines: number[]) {
+    const tab = this.active();
+    if (!tab || tab.stale || this.state.openingRepository || !this.state.repo)
+      return;
+    const unstage = tab.base === "Head" && tab.target === "Index";
+    if (!unstage && !(tab.base === "Index" && tab.target === "Worktree"))
+      return;
+    const epoch = this.epoch,
+      comparison_id = tab.data.comparison.id,
+      expected_generation = this.state.repo.generation;
+    try {
+      const r = await this.api.desktop({
+        kind: "PrepareSelection",
+        scope: this.scope(),
+        comparison_id,
+        path: tab.path,
+        expected_generation,
+        old_lines,
+        new_lines,
+        unstage,
+      });
+      if (
+        epoch === this.epoch &&
+        this.active()?.data.comparison.id === comparison_id &&
+        r.kind === "PreparedSelection"
+      )
+        this.patch({
+          gitPreview: {
+            ...r,
+            generation: expected_generation,
+            path: tab.path.display,
+          },
+        });
+    } catch (e) {
+      if (epoch === this.epoch) this.error(e);
+    }
+  }
+  dismissGitPreview() {
+    this.patch({ gitPreview: null });
+  }
+  async applyGitPreview() {
+    const p = this.state.gitPreview;
+    if (!p) return;
+    if (p.generation !== this.state.repo?.generation) {
+      this.error({ code: "STALE_STATE" });
+      return;
+    }
+    await this.runGit({ kind: "ApplyPrepared", id: p.id });
   }
   scope() {
     if (!this.state.repo) throw Error("NO_REPOSITORY");

@@ -264,3 +264,69 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
     page.getByText("Ваша отметка: Принято", { exact: true }),
   ).toHaveCount(0);
 });
+
+test("partial staging preview, commit, and real drag docking", async ({
+  page,
+  request,
+}) => {
+  const info = await (await request.get("/test-operations")).json();
+  await page.setViewportSize({ width: 1600, height: 1050 });
+  await page.goto("/e2e/");
+  await page.getByLabel("Путь к репозиторию").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Открыть репозиторий", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Файл Selected.cs", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Блок под курсором → Index…", exact: true })
+    .click();
+  const preview = page.getByRole("dialog", { name: "Предпросмотр Index" });
+  await expect(preview).toBeVisible();
+  await expect(preview.locator("pre").last()).toContainText("new");
+  await expect(preview.locator("pre").last()).not.toContainText("extra");
+  await page
+    .getByRole("button", { name: "Применить к Index", exact: true })
+    .click();
+  await expect(page.locator(".git-job")).toContainText("Git: готово", {
+    timeout: 15000,
+  });
+  const result = await (await request.get("/test-operations-state")).json();
+  expect(result.index).toBe("new\n" + "keep\n".repeat(12));
+  expect(result.worktree).toContain("extra");
+  await page
+    .getByText("Git-операции · staging, ветки, синхронизация", { exact: true })
+    .click();
+  await page.getByLabel("Сообщение коммита").fill("UI partial commit");
+  await page
+    .getByRole("button", { name: "Создать коммит", exact: true })
+    .click();
+  await expect(page.locator(".git-job")).toContainText("Git: готово", {
+    timeout: 15000,
+  });
+  await expect
+    .poll(
+      async () =>
+        (await (await request.get("/test-operations-state")).json()).subject,
+    )
+    .toBe("UI partial commit");
+  // Drag the title itself, not the placement menu. Persisted geometry must change.
+  const title = page.locator(".dock-panel-files > .dock-title");
+  const target = page.locator(".dock-panel-code");
+  const before = await page.evaluate(() =>
+    localStorage.getItem("agai-layout-v1"),
+  );
+  const targetBox = (await target.boundingBox())!;
+  await title.dragTo(target, { targetPosition: { x: targetBox.width - 8, y: 120 } });
+  const filesBox = await page.locator(".dock-panel-files").boundingBox();
+  const codeBox = await target.boundingBox();
+  expect(filesBox).not.toBeNull();
+  expect(codeBox).not.toBeNull();
+  expect(filesBox!.x).toBeGreaterThan(codeBox!.x);
+  expect(await page.evaluate(()=>localStorage.getItem("agai-layout-v1"))).not.toBe(before);
+  await page.screenshot({
+    path: "../../.superpowers/t5-git-ui.png",
+    fullPage: true,
+  });
+});

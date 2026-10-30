@@ -4,6 +4,7 @@ import type {
   Revision,
   Side,
   ReviewState,
+  GitAction,
 } from "../../../../../packages/api/src/generated";
 import {
   sendPanelAction,
@@ -65,6 +66,68 @@ export async function dispatchPanelAction(
     return;
   const tab = w.active();
   switch (message.action) {
+    case "git_cancel":
+      if (p.id === w.state.gitJob?.id) await w.cancelGit();
+      break;
+    case "git_dismiss":
+      if (p.id === w.state.gitPreview?.id) w.dismissGitPreview();
+      break;
+    case "git_apply":
+      if (p.id === w.state.gitPreview?.id) await w.applyGitPreview();
+      break;
+    case "git_prepare":
+      if (
+        tab &&
+        p.comparisonId === tab.data.comparison.id &&
+        Array.isArray(p.old) &&
+        Array.isArray(p.new) &&
+        p.old.length + p.new.length <= 100000 &&
+        [...p.old, ...p.new].every((n) => Number.isSafeInteger(n) && n > 0)
+      )
+        await w.prepareSelection(p.old, p.new);
+      break;
+    case "git_action": {
+      const a = p.action;
+      if (!object(a)) break;
+      if (a.kind === "Stage" || a.kind === "Unstage") {
+        if (
+          tab &&
+          p.comparisonId === tab.data.comparison.id &&
+          !tab.stale &&
+          object(a.path) &&
+          a.path.raw_base64 === tab.path.raw_base64
+        )
+          await w.runGit({ kind: a.kind, path: tab.path });
+      } else if (message.panel === "git") {
+        if (
+          a.kind === "Commit" &&
+          typeof a.message === "string" &&
+          a.message.length <= 32768
+        )
+          await w.runGit({ kind: a.kind, message: a.message });
+        if (
+          (a.kind === "CreateBranch" || a.kind === "SwitchBranch") &&
+          typeof a.name === "string" &&
+          a.name.length <= 255
+        )
+          await w.runGit({ kind: a.kind, name: a.name });
+        if (
+          ["Fetch", "Pull", "Push"].includes(a.kind) &&
+          typeof a.remote === "string" &&
+          w.state.gitRemotes.includes(a.remote)
+        ) {
+          if (a.kind === "Fetch")
+            await w.runGit({ kind: "Fetch", remote: a.remote });
+          else if (typeof a.branch === "string" && a.branch.length <= 255)
+            await w.runGit({
+              kind: a.kind as "Pull" | "Push",
+              remote: a.remote,
+              branch: a.branch,
+            });
+        }
+      }
+      break;
+    }
     case "refresh_explanations":
       await w.refreshExplanations();
       break;
@@ -294,6 +357,33 @@ export class DetachedWorkspace extends Workspace {
       comparisonId: this.active()?.data.comparison.id,
     });
   }
+  override async runGit(action: GitAction) {
+    await this.action("git_action", {
+      action,
+      comparisonId: this.active()?.data.comparison.id,
+    });
+  }
+  override async prepareSelection(old: number[], next: number[]) {
+    await this.action("git_prepare", {
+      old,
+      new: next,
+      comparisonId: this.active()?.data.comparison.id,
+    });
+  }
+  override async applyGitPreview() {
+    await this.action("git_apply", { id: this.state.gitPreview?.id });
+  }
+  override dismissGitPreview() {
+    void this.action("git_dismiss", { id: this.state.gitPreview?.id });
+  }
+  override async cancelGit() {
+    await this.action("git_cancel", { id: this.state.gitJob?.id });
+  }
+  override async createRepository() {
+    throw Error("MAIN_WINDOW_REQUIRED");
+  }
+  override async refreshRemotes() {}
+  override async pollGit() {}
   override async poll() {}
   override async openRepository() {
     throw Error("MAIN_WINDOW_REQUIRED");

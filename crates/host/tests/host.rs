@@ -29,6 +29,7 @@ fn profile_rejects_symlink() {
 fn remote_principal_cannot_use_local_read() {
     let d = tempfile::tempdir().unwrap();
     let mut service = HostService {
+        operations: Default::default(),
         store: agai_storage::Store::open(&d.path().join("db")).unwrap(),
     };
     assert_eq!(
@@ -61,6 +62,7 @@ fn real_socket_enforces_version_and_response_framing() {
     let (mut client, mut server) = UnixStream::pair().unwrap();
     let worker = std::thread::spawn(move || {
         let mut service = HostService {
+            operations: Default::default(),
             store: agai_storage::Store::open(&db).unwrap(),
         };
         agai_host::handle(&mut service, &mut server).unwrap();
@@ -137,6 +139,7 @@ fn registered_repo_scope_and_capture_work_end_to_end() {
     );
     std::fs::write(repo.join("code.cs"), "class C {}\n").unwrap();
     let mut service = HostService {
+        operations: Default::default(),
         store: agai_storage::Store::open(&d.path().join("db")).unwrap(),
     };
     let state = service.register_repository(&repo).unwrap();

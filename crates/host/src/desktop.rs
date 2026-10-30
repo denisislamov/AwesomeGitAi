@@ -18,6 +18,47 @@ impl HostService {
             return Err(AppError::new("SCOPE_DENIED"));
         }
         let response = match request {
+            DesktopRequest::GitStart {
+                scope,
+                expected_generation,
+                action,
+            } => self.start_git(scope, expected_generation, action)?,
+            DesktopRequest::GitPoll { id } => self.operations.poll(id)?,
+            DesktopRequest::GitCancel { id } => self.operations.cancel(id)?,
+            DesktopRequest::GitShutdown => {
+                self.operations.stop();
+                DesktopResponse::GitStopped
+            }
+            DesktopRequest::CreateRepository { path, source } => {
+                self.operations.create(path, source)?
+            }
+            DesktopRequest::GitRemotes { scope } => DesktopResponse::GitRemotes {
+                names: String::from_utf8_lossy(
+                    &self
+                        .reader(scope.repo_id, scope.worktree_id)?
+                        .run(&["remote"])?,
+                )
+                .lines()
+                .map(str::to_owned)
+                .collect(),
+            },
+            DesktopRequest::PrepareSelection {
+                scope,
+                comparison_id,
+                path,
+                expected_generation,
+                old_lines,
+                new_lines,
+                unstage,
+            } => self.prepare_selection(
+                scope,
+                comparison_id,
+                path,
+                expected_generation,
+                old_lines,
+                new_lines,
+                unstage,
+            )?,
             DesktopRequest::CreateAgentGrant { scope } => self.create_agent_grant(scope)?,
             DesktopRequest::GetDecisions {
                 scope,

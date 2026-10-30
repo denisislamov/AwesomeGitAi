@@ -52,6 +52,45 @@ export function testHost() {
     configureServer(server: any) {
       server.httpServer?.once("close", cleanup);
       server.middlewares.use(async (req: any, res: any, next: any) => {
+        if (req.url === "/test-operations") {
+          const ops = join(dir, "operations");
+          execFileSync("git", ["init", "-q", ops]);
+          const opgit = (...a: string[]) =>
+            execFileSync("git", ["-C", ops, ...a], { encoding: "utf8" }).trim();
+          opgit("config", "user.name", "UI Test");
+          opgit("config", "user.email", "ui@example.invalid");
+          writeFileSync(
+            join(ops, "Selected.cs"),
+            "old\n" + "keep\n".repeat(12),
+          );
+          opgit("add", "Selected.cs");
+          opgit("commit", "-qm", "Baseline");
+          writeFileSync(
+            join(ops, "Selected.cs"),
+            "new\n" + "keep\n".repeat(12) + "extra\n",
+          );
+          res.setHeader("Content-Type", "application/json");
+          res.end(JSON.stringify({ repo: ops }));
+          return;
+        }
+        if (req.url === "/test-operations-state") {
+          const ops = join(dir, "operations");
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              index: execFileSync("git", ["-C", ops, "show", ":Selected.cs"], {
+                encoding: "utf8",
+              }),
+              worktree: readFileSync(join(ops, "Selected.cs"), "utf8"),
+              subject: execFileSync(
+                "git",
+                ["-C", ops, "log", "-1", "--format=%s"],
+                { encoding: "utf8" },
+              ).trim(),
+            }),
+          );
+          return;
+        }
         if (req.url === "/test-info") {
           res.setHeader("Content-Type", "application/json");
           res.end(

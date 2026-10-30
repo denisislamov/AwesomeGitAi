@@ -981,3 +981,89 @@ code {
   padding: 10px;
   font: inherit;
 }
+
+/* Git actions use the same compact typography as the editor and dock headers. */
+.git-panel-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+.git-panel-content > .git-log {
+  flex: 1;
+  min-height: 140px;
+}
+.git-controls {
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.git-controls summary {
+  cursor: pointer;
+  padding: 4px 0;
+}
+.git-controls fieldset {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+  padding: 6px;
+  border: 1px solid var(--border);
+}
+.git-controls p {
+  margin: 4px 0;
+}
+.git-controls textarea {
+  font: inherit;
+  background: var(--bg);
+  color: inherit;
+  flex: 1;
+  min-width: 180px;
+}
+.git-job,
+.file-stage-actions,
+.repo-create {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 4px 8px;
+  font: inherit;
+}
+.repo-create input {
+  flex: 1;
+}
+.git-job {
+  border-bottom: 1px solid var(--border);
+}
+.git-preview {
+  padding: 8px;
+  border: 1px solid #d79921;
+  max-height: 50%;
+  overflow: auto;
+  flex-shrink: 0;
+}
+.git-preview h3,
+.git-preview p {
+  font: inherit;
+  margin: 4px 0;
+}
+.git-preview button {
+  margin-right: 6px;
+}
+.preview-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.preview-columns > div {
+  min-width: 0;
+}
+.preview-columns pre {
+  font: inherit;
+  overflow: auto;
+  max-height: 220px;
+  background: #1d2021;
+  padding: 6px;
+}

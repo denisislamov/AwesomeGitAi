@@ -16,6 +16,7 @@ fn rpc(db: &Path, action: Value) -> Value {
     let db = db.to_owned();
     let task = std::thread::spawn(move || {
         let mut host = agai_host::HostService {
+            operations: Default::default(),
             store: agai_storage::Store::open(&db).unwrap(),
         };
         agai_host::handle(&mut host, &mut s).unwrap();

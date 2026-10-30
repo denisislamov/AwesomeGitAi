@@ -6,6 +6,11 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import { Workspace, revisionLabel, type WorkspaceApi } from "./workspace";
+import {
+  GitControls,
+  GitJobStatus,
+  GitPreview,
+} from "./features/git-operations/GitControls";
 import { CodeReader } from "./features/code/CodeReader";
 import { GitLog } from "./features/git-log/GitLog";
 import { AgentConnection } from "./features/explanation/AgentConnection";
@@ -50,6 +55,8 @@ export function App({
   const s = useSyncExternalStore(workspace.subscribe, workspace.getSnapshot);
   const tab = workspace.active();
   const [root, setRoot] = useState("");
+  const [source, setSource] = useState("");
+  const [create, setCreate] = useState(false);
   const [treeMode, setTreeMode] = useState("changed");
   const [filter, setFilter] = useState("");
   const [view, setView] = useState<"unified" | "split">("unified");
@@ -141,6 +148,7 @@ export function App({
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
+      await workspace.pollGit();
       await workspace.poll();
       if (!stopped) timer = setTimeout(tick, 1200);
     };
@@ -267,6 +275,7 @@ export function App({
             </div>
           ))}
         </div>
+        <GitPreview workspace={workspace} />
         <div className="code-toolbar">
           <select
             aria-label="Режим сравнения"
@@ -418,6 +427,29 @@ export function App({
                 </button>
               </div>
             )}
+            {((tab.base === "Index" && tab.target === "Worktree") ||
+              (tab.base === "Head" && tab.target === "Index")) && (
+              <div className="file-stage-actions">
+                <button
+                  disabled={
+                    tab.stale || s.gitStarting || s.gitJob?.status === "Running"
+                  }
+                  onClick={() =>
+                    void workspace.runGit({
+                      kind: tab.target === "Index" ? "Unstage" : "Stage",
+                      path: tab.path,
+                    })
+                  }
+                >
+                  {tab.target === "Index"
+                    ? "Убрать файл из Index"
+                    : "Добавить файл в Index"}
+                </button>
+                <span>
+                  Для части файла выделите строки или выберите блок ниже.
+                </span>
+              </div>
+            )}
             <CodeReader
               key={tab.id}
               tab={tab}
@@ -441,13 +473,20 @@ export function App({
               <br />
               История, изменения и контекст останутся рядом.
             </p>
-            <span>Локально · Только чтение · Снимки сохраняются</span>
+            <span>
+              Локально · Контролируемые Git-операции · Снимки сохраняются
+            </span>
           </div>
         )}
       </section>
     ),
     explanation: <ExplanationPanel workspace={workspace} />,
-    git: <GitLog workspace={workspace} />,
+    git: (
+      <div className="git-panel-content">
+        <GitControls workspace={workspace} />
+        <GitLog workspace={workspace} />
+      </div>
+    ),
   };
   if (panel)
     return (
@@ -468,6 +507,7 @@ export function App({
             Вернуть в основное окно
           </button>
         </header>
+        <GitJobStatus workspace={workspace} />
         {bridgeStatus && <div role="status">{bridgeStatus}</div>}
         {s.error && <div role="alert">{s.error}</div>}
         <div className="dock-content">{panels[panel]}</div>
@@ -527,6 +567,32 @@ export function App({
           ))}
         </select>
       </header>
+      <div className="repo-create">
+        <button aria-expanded={create} onClick={() => setCreate(!create)}>
+          Init / Clone…
+        </button>
+        {create && (
+          <>
+            <input
+              aria-label="Источник clone"
+              placeholder="URL или путь remote; пусто для Init"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            />
+            <button
+              disabled={
+                !root || s.gitStarting || s.gitJob?.status === "Running"
+              }
+              onClick={() =>
+                void workspace.createRepository(root, source || null)
+              }
+            >
+              {source ? "Клонировать" : "Создать репозиторий"} по пути выше
+            </button>
+          </>
+        )}
+      </div>
+      <GitJobStatus workspace={workspace} />
       <div className="repo-strip">
         <AgentConnection root={s.root} />
         <span title={s.root}>
@@ -558,7 +624,7 @@ export function App({
             ? `${tab.data.target.files.find((f) => f.path.raw_base64 === tab.path.raw_base64)!.newline.toUpperCase()} · UTF-8 · ${tab.data.target.files.find((f) => f.path.raw_base64 === tab.path.raw_base64)!.bytes.length} bytes`
             : "Нет открытого файла"}
         </span>
-        <span>Git-записи появятся в T5</span>
+        <span>Git · Index отделён от отметок ревью</span>
       </footer>
     </main>
   );

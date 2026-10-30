@@ -16,7 +16,7 @@ import {
 } from "@codemirror/language";
 import { search, searchKeymap, openSearchPanel } from "@codemirror/search";
 import { defaultKeymap } from "@codemirror/commands";
-import { MergeView, unifiedMergeView } from "@codemirror/merge";
+import { MergeView, unifiedMergeView, Chunk } from "@codemirror/merge";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { csharp } from "@replit/codemirror-lang-csharp";
@@ -297,9 +297,64 @@ export function CodeReader({
         ))}
       </div>
     );
+  const canStage =
+    !tab.stale &&
+    ((tab.base === "Index" && tab.target === "Worktree") ||
+      (tab.base === "Head" && tab.target === "Index"));
+  const selectionLines = (from: number, to: number) =>
+    Array.from({ length: to - from + 1 }, (_, i) => from + i);
+  const prepareHunk = () => {
+    const a = EditorState.create({
+      doc: new TextDecoder().decode(new Uint8Array(old.bytes)),
+    }).doc;
+    const b = EditorState.create({
+      doc: new TextDecoder().decode(new Uint8Array(file.bytes)),
+    }).doc;
+    const side = selected.current.side;
+    const doc = side === "Old" ? a : b;
+    const pos = doc.line(Math.min(doc.lines, selected.current.start)).from;
+    const chunks = Chunk.build(a, b);
+    const c = chunks.find((c) =>
+      side === "Old"
+        ? pos >= c.fromA && pos <= c.toA
+        : pos >= c.fromB && pos <= c.toB,
+    );
+    if (!c) {
+      workspace.error({ code: "SELECT_CHANGED_BLOCK" });
+      return;
+    }
+    const lines = (d: typeof a, from: number, to: number) =>
+      from >= to || from >= d.length
+        ? []
+        : selectionLines(
+            d.lineAt(Math.min(from, d.length)).number,
+            d.lineAt(Math.min(to - 1, d.length - 1)).number,
+          );
+    void workspace.prepareSelection(
+      lines(a, c.fromA, c.toA),
+      lines(b, c.fromB, c.toB),
+    );
+  };
   return (
     <div className="reader">
       <div className="reader-actions">
+        {canStage && (
+          <>
+            <button
+              onClick={() => {
+                const s = selected.current;
+                const lines = selectionLines(s.start, s.end);
+                void workspace.prepareSelection(
+                  s.side === "Old" ? lines : [],
+                  s.side === "New" ? lines : [],
+                );
+              }}
+            >
+              Выделенные строки → Index…
+            </button>
+            <button onClick={prepareHunk}>Блок под курсором → Index…</button>
+          </>
+        )}
         <span className="readonly">◉ Только чтение</span>
         <button
           onClick={() => editor.current && openSearchPanel(editor.current)}

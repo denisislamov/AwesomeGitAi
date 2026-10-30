@@ -1,5 +1,6 @@
 mod agent;
 pub mod desktop;
+mod git_jobs;
 pub mod local_ipc;
 pub mod watch;
 use agai_protocol::*;
@@ -57,8 +58,15 @@ impl Profile {
 use std::os::unix::fs::DirBuilderExt;
 pub struct HostService {
     pub store: Store,
+    pub operations: git_jobs::Operations,
 }
 impl HostService {
+    pub fn new(store: Store) -> Self {
+        Self {
+            store,
+            operations: Default::default(),
+        }
+    }
     pub fn register_repository(&self, path: &Path) -> Result<RepoState> {
         use std::os::unix::ffi::OsStrExt;
         let r = agai_git::GitReader::new(path)?;
@@ -189,7 +197,7 @@ pub fn serve(profile: &Profile) -> Result<()> {
     fs::set_permissions(&socket, fs::Permissions::from_mode(0o600)).map_err(io)?;
     let store =
         Store::open(&profile.path.join("store.db")).map_err(|_| AppError::new("STORAGE_ERROR"))?;
-    let mut service = HostService { store };
+    let mut service = HostService::new(store);
     for stream in listener.incoming() {
         let mut stream = stream.map_err(io)?;
         let _ = handle(&mut service, &mut stream);

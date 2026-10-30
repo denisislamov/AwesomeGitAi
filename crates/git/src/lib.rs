@@ -1,3 +1,4 @@
+pub mod operations;
 pub mod runner;
 use agai_protocol::*;
 use std::{

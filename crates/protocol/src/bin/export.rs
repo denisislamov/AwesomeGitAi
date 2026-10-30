@@ -38,6 +38,8 @@ fn main() {
         DecisionAnchorView,
         EvidenceView,
         DecisionView,
+        GitAction,
+        GitJob,
         DesktopRequest,
         DesktopEnvelope,
         DesktopResponse

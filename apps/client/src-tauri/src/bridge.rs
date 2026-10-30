@@ -32,6 +32,15 @@ impl DesktopHost {
         self.closing.store(true, Ordering::SeqCst);
         if let Ok(mut child) = self.child.lock() {
             if let Some(mut process) = child.take() {
+                if let Ok(mut stream) = UnixStream::connect(self.profile.join("host.sock")) {
+                    let _ = stream.set_read_timeout(Some(Duration::from_secs(20)));
+                    let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
+                    let request = serde_json::json!({"meta":{"schema_version":1,"request_id":uuid::Uuid::new_v4(),"idempotency_key":null},"desktop":{"kind":"GitShutdown"}});
+                    if let Ok(bytes) = serde_json::to_vec(&request) {
+                        let _ = stream.write_all(&(bytes.len() as u32).to_be_bytes()).and_then(|_|stream.write_all(&bytes));
+                        let mut header=[0;4];let _=stream.read_exact(&mut header);
+                    }
+                }
                 let _ = process.kill();
                 let _ = process.wait();
             }

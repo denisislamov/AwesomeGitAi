@@ -360,6 +360,34 @@ pub struct BranchRef {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum DesktopRequest {
+    GitStart {
+        scope: RepoScope,
+        expected_generation: String,
+        action: GitAction,
+    },
+    GitPoll {
+        id: Uuid,
+    },
+    GitCancel {
+        id: Uuid,
+    },
+    GitShutdown,
+    GitRemotes {
+        scope: RepoScope,
+    },
+    CreateRepository {
+        path: String,
+        source: Option<String>,
+    },
+    PrepareSelection {
+        scope: RepoScope,
+        comparison_id: Uuid,
+        path: RepoPath,
+        expected_generation: String,
+        old_lines: Vec<u32>,
+        new_lines: Vec<u32>,
+        unstage: bool,
+    },
     CreateAgentGrant {
         scope: RepoScope,
     },
@@ -405,6 +433,18 @@ pub struct DesktopEnvelope {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind")]
 pub enum DesktopResponse {
+    GitJob {
+        job: GitJob,
+    },
+    GitStopped,
+    GitRemotes {
+        names: Vec<String>,
+    },
+    PreparedSelection {
+        id: Uuid,
+        before: String,
+        after: String,
+    },
     AgentGrant {
         token: String,
         repo_id: Uuid,
@@ -504,4 +544,28 @@ pub struct AgentCall {
     pub token: String,
     pub tool: String,
     pub arguments: serde_json::Value,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+#[serde(tag = "kind", deny_unknown_fields)]
+pub enum GitAction {
+    Stage { path: RepoPath },
+    Unstage { path: RepoPath },
+    ApplyPrepared { id: Uuid },
+    Commit { message: String },
+    CreateBranch { name: String },
+    SwitchBranch { name: String },
+    Fetch { remote: String },
+    Pull { remote: String, branch: String },
+    Push { remote: String, branch: String },
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct GitJob {
+    pub id: Uuid,
+    pub root: String,
+    pub status: String,
+    pub error: Option<String>,
+    pub cancel_requested: bool,
+    pub state_changed: bool,
+    pub outcome_uncertain: bool,
 }

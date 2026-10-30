@@ -5,6 +5,7 @@ use agai_storage::Store;
 fn grants_require_local_user_and_reject_unknown_token() {
     let tmp = tempfile::tempdir().unwrap();
     let mut h = HostService {
+        operations: Default::default(),
         store: Store::open(&tmp.path().join("db")).unwrap(),
     };
     let scope = RepoScope {
@@ -52,6 +53,7 @@ fn real_agent_explanation_and_human_review_are_bound_to_original_pair() {
     std::fs::write(repo.join("a.cs"), "old\n").unwrap();
     std::fs::write(repo.join("b.cs"), "other\n").unwrap();
     let mut h = HostService {
+        operations: Default::default(),
         store: Store::open(&tmp.path().join("db")).unwrap(),
     };
     let state = h.register_repository(&repo).unwrap();
