@@ -45,7 +45,13 @@ impl Operations {
             self.tasks
                 .retain(|_, t| t.thread.as_ref().is_some_and(|h| !h.is_finished()));
         }
-        if self.tasks.len() >= 16 {
+        if self
+            .tasks
+            .values()
+            .filter(|t| t.thread.as_ref().is_some_and(|h| !h.is_finished()))
+            .count()
+            >= 16
+        {
             return Err(err("TOO_MANY_OPERATIONS"));
         }
         let id = Uuid::new_v4();

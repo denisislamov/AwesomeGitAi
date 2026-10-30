@@ -132,3 +132,34 @@ fn partial_staging_rejects_git_normalization_instead_of_corrupting_unselected_li
     );
     assert!(matches!(result,Err(e)if e.code=="PARTIAL_FILTER_UNSUPPORTED"));
 }
+#[test]
+fn copied_index_preserves_racy_git_detection_for_same_size_edits() {
+    use std::fs::{File, FileTimes};
+    let d = fixture();
+    let p = d.path();
+    git(p, &["config", "core.trustctime", "false"]);
+    std::fs::write(p.join("a"), "before\n").unwrap();
+    git(p, &["add", "a"]);
+    std::thread::sleep(std::time::Duration::from_millis(1100));
+    git(p, &["update-index", "--refresh", "--force-write-index"]);
+    let old = std::fs::metadata(p.join("a")).unwrap().modified().unwrap();
+    std::fs::write(p.join("a"), "edited\n").unwrap();
+    File::open(p.join("a"))
+        .unwrap()
+        .set_times(FileTimes::new().set_modified(old))
+        .unwrap();
+    File::open(p.join(".git/index"))
+        .unwrap()
+        .set_times(FileTimes::new().set_modified(old))
+        .unwrap();
+    let r = GitReader::new(p).unwrap();
+    assert!(!r.state().unwrap().status_entries.is_empty());
+    prepare(&r).commit(&AtomicBool::new(false)).unwrap();
+    let o = Command::new("git")
+        .arg("-C")
+        .arg(p)
+        .args(["show", ":a"])
+        .output()
+        .unwrap();
+    assert_eq!(o.stdout, b"edited\n");
+}

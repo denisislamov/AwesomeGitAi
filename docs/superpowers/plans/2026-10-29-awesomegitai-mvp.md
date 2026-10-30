@@ -166,12 +166,14 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 **Files:** create `crates/git/src/{operations.rs,index_transaction.rs,credentials.rs}`, `crates/git/tests/{operations.rs,stage_races.rs}`, `apps/client/src/features/git-actions/{StageSelection.tsx,CommitPanel.tsx,RemoteActions.tsx}`.
 **Interfaces:** consumes T2 `RepoState`; produces `GitService::start(principal,GitCommand,expected_generation) -> OperationId`, `cancel(id) -> GitOperation`, `prepareSelection(comparison_id,hunk_id,line_ids) -> PreparedPatch`.
 
-- [ ] Add failing tests for init/clone, branch create/switch, stage/unstage file/hunk/arbitrary selected lines including deletions, commit, fetch/ff-pull/push to local bare remote; verify exact index bytes and untouched unselected changes. Add hooks failure, missing SSH/helper, cancellation, index.lock and external index/ref writer races; linked worktrees share mutation serialization by common Git dir.
-- [ ] Run `cargo test -p agai-git --test operations` and `cargo test -p agai-git --test stage_races` → FAIL.
-- [ ] Implement Git CLI operations with scoped paths and structured progress. For partial index writes: prepare against captured blobs in isolated temporary index, acquire Git-compatible index lock, compare live index fingerprint/HEAD to expected state, atomically replace index only on match, clean only owned lock/temp files. Revalidate selected worktree content and report remaining external changes; no claim of atomic lock against arbitrary editor writes.
-- [ ] Pull default ff-only; diverged/conflicted repo shows exact state and opens external resolver/IDE. No automatic stash/reset/force push. Git credential helper/SSH/GPG/hook behavior respects user environment; secrets absent from logs; missing support fails visibly. `cancel` reports actual final state if commit already completed.
+- [x] Add failing tests for init/clone, branch create/switch, stage/unstage file/hunk/arbitrary selected lines including deletions, commit, fetch/ff-pull/push to local bare remote; verify exact index bytes and untouched unselected changes. Add hooks failure, missing SSH/helper, cancellation, index.lock and external index/ref writer races; linked worktrees share mutation serialization by common Git dir.
+- [x] Run `cargo test -p agai-git --test operations` and `cargo test -p agai-git --test stage_races` → FAIL.
+- [x] Implement Git CLI operations with scoped paths and structured progress. For partial index writes: prepare against captured blobs in isolated temporary index, acquire Git-compatible index lock, compare live index fingerprint/HEAD to expected state, atomically replace index only on match, clean only owned lock/temp files. Revalidate selected worktree content and report remaining external changes; no claim of atomic lock against arbitrary editor writes.
+- [x] Pull default ff-only; diverged/conflicted repo shows exact state and opens external resolver/IDE. No automatic stash/reset/force push. Git credential helper/SSH/GPG/hook behavior respects user environment; secrets absent from logs; missing support fails visibly. `cancel` reports actual final state if commit already completed.
 - [ ] Run both suites + packaged GUI auth/cancel smoke → PASS; MCP/remote principals get SCOPE_DENIED for every mutation. ReviewMark changes never alter index.
-- [ ] Commit `feat: add guarded git operations and partial staging`.
+- [x] Commit `feat: add guarded git operations and partial staging`.
+
+> Execution update 2026-10-30: implementation `8d8f90e`, final review/native-discovered corrections verified. Automated Rust92/UI34/probe4/native8/browser10 and final bundled-host auth/cancel IPC smoke pass. Final manual GUI cancellation/detach follow-up awaits unlock after Mac relocked. See `docs/architecture/t5-results.md`; T6 not started.
 
 ## T6 · Учебный debugger и диаграммы
 

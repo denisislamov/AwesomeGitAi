@@ -77,6 +77,33 @@ fn jobs_are_local_scoped_and_partial_preview_is_bound_to_generation() {
     assert_eq!(git(&p, &["show", ":a"]), "new\nkeep");
     assert_eq!(std::fs::read(p.join("a")).unwrap(), b"new\nkeep\nextra\n");
     assert_eq!(call(&mut h, req).unwrap_err().code, "STALE_STATE");
+    let state = h.register_repository(&p).unwrap();
+    let c = serde_json::to_value(
+        call(
+            &mut h,
+            json!({"kind":"CompareFile","scope":scope,"path":path,"base":"Head","target":"Index"}),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let preview=serde_json::to_value(call(&mut h,json!({"kind":"PrepareSelection","scope":scope,"comparison_id":c["comparison"]["id"],"path":path,"expected_generation":state.generation,"old_lines":[1],"new_lines":[1],"unstage":true})).unwrap()).unwrap();
+    assert_eq!(preview["after"], "old\nkeep\n");
+    let job=serde_json::to_value(call(&mut h,json!({"kind":"GitStart","scope":scope,"expected_generation":state.generation,"action":{"kind":"ApplyPrepared","id":preview["id"]}})).unwrap()).unwrap();
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        let r = serde_json::to_value(
+            call(&mut h, json!({"kind":"GitPoll","id":job["job"]["id"]})).unwrap(),
+        )
+        .unwrap();
+        if r["job"]["status"] != "Running" {
+            assert_eq!(r["job"]["status"], "Succeeded");
+            break;
+        }
+        assert!(Instant::now() < deadline);
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(git(&p, &["show", ":a"]), "old\nkeep");
+    assert_eq!(std::fs::read(p.join("a")).unwrap(), b"new\nkeep\nextra\n");
 }
 #[test]
 fn cancelling_post_commit_reports_the_actual_ref_change() {
@@ -121,4 +148,59 @@ fn cancelling_post_commit_reports_the_actual_ref_change() {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert_ne!(git(&p, &["rev-parse", "HEAD"]), before);
+}
+#[test]
+fn completed_jobs_do_not_exhaust_active_operation_capacity() {
+    let d = tempfile::tempdir().unwrap();
+    let mut h =
+        agai_host::HostService::new(agai_storage::Store::open(&d.path().join("db")).unwrap());
+    for _ in 0..70 {
+        let result = call(
+            &mut h,
+            json!({"kind":"CreateRepository","path":"relative-invalid-path","source":null}),
+        )
+        .unwrap();
+        let job = serde_json::to_value(result).unwrap();
+        let id = &job["job"]["id"];
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            let r = serde_json::to_value(call(&mut h, json!({"kind":"GitPoll","id":id})).unwrap())
+                .unwrap();
+            if r["job"]["status"] != "Running" {
+                assert_eq!(r["job"]["error"], "INVALID_DESTINATION");
+                break;
+            }
+            assert!(Instant::now() < deadline);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+    }
+}
+#[test]
+fn every_git_endpoint_denies_mcp_and_remote_principals() {
+    let d = tempfile::tempdir().unwrap();
+    let mut h =
+        agai_host::HostService::new(agai_storage::Store::open(&d.path().join("db")).unwrap());
+    let id = uuid::Uuid::new_v4();
+    let scope = json!({"repo_id":id,"worktree_id":id});
+    let requests = [
+        json!({"kind":"GitStart","scope":scope,"expected_generation":"x","action":{"kind":"Commit","message":"x"}}),
+        json!({"kind":"GitPoll","id":id}),
+        json!({"kind":"GitCancel","id":id}),
+        json!({"kind":"GitShutdown"}),
+        json!({"kind":"CreateRepository","path":"/tmp/never-created","source":null}),
+        json!({"kind":"PrepareSelection","scope":scope,"comparison_id":id,"path":RepoPath::from_bytes(b"a").unwrap(),"expected_generation":"x","old_lines":[],"new_lines":[1],"unstage":false}),
+    ];
+    for principal in [
+        Principal::McpSession { session_id: id },
+        Principal::RemoteDevice { device_id: id },
+    ] {
+        for req in &requests {
+            assert_eq!(
+                h.desktop(&principal, serde_json::from_value(req.clone()).unwrap())
+                    .unwrap_err()
+                    .code,
+                "SCOPE_DENIED"
+            );
+        }
+    }
 }

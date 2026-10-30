@@ -51,3 +51,10 @@ Backend commit: `1d5d113 feat: record agent decisions through MCP`. Final compac
 Desktop/UI commit: `070d65b feat: add snapshot explanations and compact detachable IDE panels`. Final `pnpm test` builds fresh host/gateway before testing: workspace 73 + client32 + probe4 pass; native8 separately pass. Full browser9 pass; final MCP-fixture rerun passes. Working scope remains macOS development build; OS permission follow-up above is explicit.
 
 T4 native follow-up: user approved Documents and unlocked Mac. Final compact bundle repository/code/explanation/detach/redock/original Accepted mark verified. Previous TCC/lock item closed. T5 starts next, macOS only; tests/regression/local commits authorized. Docking/detaching remains a primary workflow.
+
+
+## T5 — Git operations implemented; final manual GUI follow-up pending
+
+Implementation `8d8f90e`: init/clone, branch create/switch, stage/unstage file/selection/hunk with Index preview, commit, fetch/ff-only pull/push, background cancellation and main-owned actions from detached panels. Local-user-only writes; common-Git-dir serialization, external index/ref checks and immutable snapshots preserved.
+
+Native acceptance exposed loss of Git index timestamps; independent review found completed jobs exhausting the active-job limit. Both reproduced RED→GREEN and corrected in the final fix commit. Final regression: Rust92 + UI34 + probe4 + native8; Playwright10, contracts/typecheck/macOS bundle pass. Packaged host IPC auth/stage/cancel/shutdown smoke passes. Final manual GUI cancellation/detach recheck awaits Mac unlock after it relocked during regression; do not treat that item as passed. No push/merge, T6 not started. Detailed behavior and limits: [T5 results](../architecture/t5-results.md).

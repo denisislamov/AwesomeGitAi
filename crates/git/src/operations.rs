@@ -277,7 +277,13 @@ impl IndexTransaction {
         temp_lock_path.push(".lock");
         let temp_lock = TempLock(PathBuf::from(temp_lock_path));
         if let Some(bytes) = &before {
+            // Index timestamps participate in Git's racy-stat detection. A byte copy
+            // with a fresh mtime can make same-size edits falsely look clean.
+            let modified = fs::metadata(&index).map_err(io)?.modified().map_err(io)?;
             fs::write(temp.path(), bytes).map_err(io)?;
+            temp.as_file()
+                .set_times(fs::FileTimes::new().set_modified(modified))
+                .map_err(io)?;
         } else {
             fs::remove_file(temp.path()).map_err(io)?;
             command(
@@ -416,6 +422,12 @@ impl IndexTransaction {
         generation(&r, &self.generation)?;
         let bytes = fs::read(self.temp.path()).map_err(io)?;
         lock.write_all(&bytes).map_err(io)?;
+        let modified = fs::metadata(self.temp.path())
+            .map_err(io)?
+            .modified()
+            .map_err(io)?;
+        lock.set_times(fs::FileTimes::new().set_modified(modified))
+            .map_err(io)?;
         lock.sync_all().map_err(io)?;
         if cancel.load(Ordering::Relaxed) {
             return Err(err("CANCELLED"));
