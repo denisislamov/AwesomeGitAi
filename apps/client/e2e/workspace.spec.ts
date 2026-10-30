@@ -553,3 +553,63 @@ for (const language of ["ts", "cs"])
     await expect(dialog).toContainText("Reference count unknown.");
     await expect(dialog).not.toContainText("0 references");
   });
+
+test("language help is optional, snapshot-bound and keyboard accessible on both diff sides", async ({
+  page,
+  request,
+}) => {
+  const info = await (await request.get("/test-info")).json();
+  await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await page.getByLabel("Repository path").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Open repository", exact: true })
+    .click();
+  await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
+  await page.getByRole("button", { name: "View options", exact: true }).click();
+  await page.getByLabel("Diff view").selectOption("split");
+  await page.getByRole("button", { name: "Close View options" }).click();
+  const dialog = page.getByRole("dialog", {
+    name: "Language construct",
+    exact: true,
+  });
+  await expect(dialog).toHaveCount(0);
+  for (const side of ["Old", "New"]) {
+    const code = page.getByLabel(`${side} code version`, { exact: true });
+    await code.focus();
+    await page.keyboard.press("Control+Home");
+    await page.keyboard.press("Home");
+    for (let i = 0; i < 7; i++) await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("Meta+Shift+k");
+    await expect(dialog).toContainText("sealed class");
+    await expect(dialog).toContainText(`Code.cs · ${side} · Snapshot`);
+    await expect(dialog).toContainText("Unknown — language syntax");
+    await dialog.getByRole("button", { name: "Example", exact: true }).click();
+    await expect(dialog).toContainText("SpecialWallet");
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(code).toBeFocused();
+  }
+  await page.getByLabel("Old code version", { exact: true }).focus();
+  await page.getByRole("button", { name: "Code actions", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Explain language construct… ⌘⇧K",
+      exact: true,
+    })
+    .click();
+  await expect(dialog).toContainText("Code.cs · Old · Snapshot");
+  await expect(dialog).toContainText("sealed class");
+  await dialog
+    .getByRole("button", { name: "Version and source", exact: true })
+    .click();
+  await expect(dialog).toContainText("Project language version is unknown");
+  await expect(dialog).toContainText("learn.microsoft.com");
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 390, height: 850 });
+  await page.getByLabel("Old code version", { exact: true }).click({ button: "right" });
+  await page.getByRole("button", { name: "Explain language construct… ⌘⇧K", exact: true }).click();
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole("button", { name: "Close Language construct", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+});

@@ -1,3 +1,5 @@
+import { ConstructDialog } from "./ConstructDialog";
+import { resolveConstruct, type ConstructHelp } from "./language-help";
 import { createPortal } from "react-dom";
 import { Dialog } from "../commands/CommandUI";
 import React, { useEffect, useRef, useState } from "react";
@@ -42,7 +44,11 @@ export class RelationsWidget extends WidgetType {
     super();
   }
   eq(other: RelationsWidget) {
-    return this.identity === other.identity && this.label === other.label && this.name === other.name;
+    return (
+      this.identity === other.identity &&
+      this.label === other.label &&
+      this.name === other.name
+    );
   }
   toDOM() {
     const b = document.createElement("button");
@@ -126,6 +132,36 @@ export function CodeReader({
     end: 1,
   });
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [construct, setConstruct] = useState<{
+    help: ConstructHelp;
+    location: string;
+    side: "Old" | "New";
+  } | null>(null);
+  const showConstruct = (
+    sourceView?: EditorView,
+    sourceSide?: "Old" | "New",
+  ) => {
+    const side = sourceSide ?? selected.current.side;
+    const v =
+      sourceView ??
+      markerEditors.current.find((e) => e.side === side)?.view ??
+      editor.current;
+    if (!v) return;
+    const snapshot = side === "Old" ? tab.data.base.id : tab.data.target.id;
+    setConstruct({
+      side,
+      help: resolveConstruct(
+        tab.path.display,
+        v.state.doc.toString(),
+        v.state.selection.main.from,
+      ),
+      location: `${tab.path.display} · ${side} · Snapshot ${snapshot.slice(0, 8)}`,
+    });
+    setActionsOpen(false);
+  };
+  useEffect(() => {
+    setConstruct(null);
+  }, [tab.id, tab.data.comparison.id]);
   const [line, setLine] = useState("1");
   useEffect(() => {
     if (!parent.current) return;
@@ -167,7 +203,18 @@ export function CodeReader({
       foldGutter(),
       lang,
       search({ top: true }),
-      keymap.of([...searchKeymap, ...foldKeymap, ...defaultKeymap]),
+      keymap.of([
+        {
+          key: "Mod-Shift-k",
+          run: (v) => {
+            showConstruct(v, side);
+            return true;
+          },
+        },
+        ...searchKeymap,
+        ...foldKeymap,
+        ...defaultKeymap,
+      ]),
       syntaxHighlighting(light ? lightSyntax : syntax),
       EditorView.theme(
         {
@@ -196,7 +243,7 @@ export function CodeReader({
         { dark: !light },
       ),
       EditorView.updateListener.of((u) => {
-        if (u.selectionSet) {
+        if (u.selectionSet || (u.focusChanged && u.view.hasFocus)) {
           const s = u.state.selection.main;
           savedPositions.set(positionKey, {
             side,
@@ -415,8 +462,10 @@ export function CodeReader({
               .filter((l) => l.line > 0 && l.line <= entry.view.state.doc.lines)
               .map((l) =>
                 Decoration.widget({
-                  widget: new RelationsWidget(l.label, l.name, () =>
-                    workspace.showRelations(true, l.symbolId),
+                  widget: new RelationsWidget(
+                    l.label,
+                    l.name,
+                    () => workspace.showRelations(true, l.symbolId),
                     `${report!.origin_snapshot_id}:${l.symbolId}`,
                   ),
                   block: true,
@@ -545,9 +594,25 @@ export function CodeReader({
       }}
     >
       {actionsHost ? createPortal(actions, actionsHost) : actions}
+      {construct && (
+        <ConstructDialog
+          help={construct.help}
+          location={construct.location}
+          onClose={() => {
+            setConstruct(null);
+            (
+              markerEditors.current.find((e) => e.side === construct.side)
+                ?.view ?? editor.current
+            )?.focus();
+          }}
+        />
+      )}
       {actionsOpen && (
         <Dialog title="Code actions" onClose={() => setActionsOpen(false)}>
           <div className="editor-settings">
+            <button onClick={() => showConstruct()}>
+              Explain language construct… ⌘⇧K
+            </button>
             <button
               onClick={() => {
                 setActionsOpen(false);
