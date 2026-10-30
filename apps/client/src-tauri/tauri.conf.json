@@ -39,7 +39,8 @@
     "targets": ["app"],
     "resources": {
       "binaries/agai-host": "bin/agai-host",
-      "binaries/agai-mcp": "bin/agai-mcp"
+      "binaries/agai-mcp": "bin/agai-mcp",
+      "binaries/relations/": "bin/relations/"
     }
   }
 }

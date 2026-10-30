@@ -1,5 +1,7 @@
+mod relations;
 mod trace;
 use base64::{Engine, engine::general_purpose::STANDARD};
+pub use relations::*;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{
@@ -362,6 +364,11 @@ pub struct BranchRef {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum DesktopRequest {
+    CodeRelations {
+        scope: RepoScope,
+        snapshot_id: Uuid,
+        path: RepoPath,
+    },
     LearningList {
         scope: RepoScope,
     },
@@ -443,6 +450,9 @@ pub struct DesktopEnvelope {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind")]
 pub enum DesktopResponse {
+    CodeRelations {
+        report: CodeRelationsReport,
+    },
     LearningList {
         items: Vec<LearningItem>,
     },

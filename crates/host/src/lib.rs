@@ -3,6 +3,7 @@ pub mod desktop;
 mod git_jobs;
 mod learning;
 pub mod local_ipc;
+mod relations;
 pub mod watch;
 use agai_protocol::*;
 use agai_storage::Store;

@@ -18,6 +18,11 @@ impl HostService {
             return Err(AppError::new("SCOPE_DENIED"));
         }
         let response = match request {
+            DesktopRequest::CodeRelations {
+                scope,
+                snapshot_id,
+                path,
+            } => self.code_relations(scope, snapshot_id, path)?,
             DesktopRequest::LearningList { scope } => self.learning_list(scope)?,
             DesktopRequest::LearningGet {
                 scope,
