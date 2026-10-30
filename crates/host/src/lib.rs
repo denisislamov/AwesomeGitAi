@@ -1,3 +1,4 @@
+mod agent;
 pub mod desktop;
 pub mod local_ipc;
 pub mod watch;
@@ -166,6 +167,9 @@ pub fn handle(service: &mut HostService, stream: &mut UnixStream) -> Result<()> 
             envelope.meta.validate(false)?;
             return serde_json::to_value(service.desktop(&Principal::LocalUser, envelope.desktop)?)
                 .map_err(|_| AppError::new("INVALID_DATA"));
+        }
+        if let Ok(envelope) = serde_json::from_slice::<AgentEnvelope>(&bytes) {
+            return service.agent(envelope.agent);
         }
         let envelope: ReadEnvelope =
             serde_json::from_slice(&bytes).map_err(|_| AppError::new("INVALID_REQUEST"))?;

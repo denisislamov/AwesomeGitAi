@@ -18,6 +18,29 @@ impl HostService {
             return Err(AppError::new("SCOPE_DENIED"));
         }
         let response = match request {
+            DesktopRequest::CreateAgentGrant { scope } => self.create_agent_grant(scope)?,
+            DesktopRequest::GetDecisions {
+                scope,
+                comparison_id,
+                path,
+            } => self.decisions(scope, comparison_id, path)?,
+            DesktopRequest::ReviewDecision {
+                scope,
+                decision_id,
+                base_snapshot_id,
+                target_snapshot_id,
+                state,
+                note,
+                idempotency_key,
+            } => self.review_decision(
+                scope,
+                decision_id,
+                base_snapshot_id,
+                target_snapshot_id,
+                state,
+                note,
+                idempotency_key,
+            )?,
             DesktopRequest::OpenRepository { path } => {
                 let state = self.register_repository(Path::new(&path))?;
                 let reader = self.reader(state.repo_id, state.worktree_id)?;
@@ -220,7 +243,7 @@ impl HostService {
                     {
                         return Err(AppError::new(&e.reason));
                     }
-                    if s.files.len() != 1 || s.files[0].path.raw_base64 != path.raw_base64 {
+                    if !s.files.iter().any(|f| f.path.raw_base64 == path.raw_base64) {
                         return Err(AppError::new("INCOMPLETE_COMPARISON"));
                     }
                     Ok(s)

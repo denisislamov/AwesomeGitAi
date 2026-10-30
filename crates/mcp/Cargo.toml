@@ -1,0 +1,15 @@
+[package]
+name = "agai-mcp"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+rmcp = {version = "=3.8.0", features = ["server", "client", "transport-io", "transport-child-process", "transport-streamable-http-server", "transport-streamable-http-client-reqwest"]}
+tokio = {version = "1", features = ["full"]}
+axum = "0.8"
+serde_json = "1"
+uuid = {version = "1", features = ["v4"]}
+jsonschema = "0.33"
+libc = "0.2"
+[dev-dependencies]
+tempfile = "3"
+reqwest = {version = "0.13", features = ["json"]}

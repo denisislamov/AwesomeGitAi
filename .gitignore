@@ -10,3 +10,5 @@ target/
 apps/client/src-tauri/binaries/
 **/test-results/
 **/playwright-report/
+
+__pycache__/

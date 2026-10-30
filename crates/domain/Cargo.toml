@@ -9,5 +9,7 @@ uuid={version="1",features=["v4","v5"]}
 libc="0.2"
 agai-git={path="../git"}
 agai-storage={path="../storage"}
+serde={version="1",features=["derive"]}
+jsonschema={version="0.33",default-features=false}
 [dev-dependencies]
 tempfile="3"

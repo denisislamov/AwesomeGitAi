@@ -18,14 +18,14 @@ impl Store {
         let version: u32 = connection
             .query_row("PRAGMA user_version", [], |r| r.get(0))
             .map_err(|e| e.to_string())?;
-        if version > 2 {
+        if version > 3 {
             return Err("UNSUPPORTED_VERSION".into());
         }
-        if version == 1 {
-            let first = path.with_extension("v1.bak");
+        if version == 1 || version == 2 {
+            let first = path.with_extension(format!("v{version}.bak"));
             let backup = if first.exists() {
                 path.with_extension(format!(
-                    "v1.{}.{}.bak",
+                    "v{version}.{}.{}.bak",
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .unwrap()
@@ -39,8 +39,13 @@ impl Store {
                 .execute("VACUUM INTO ?1", [backup.to_string_lossy().as_ref()])
                 .map_err(|e| e.to_string())?;
         }
+        if version < 2 {
+            connection
+                .execute_batch(include_str!("../migrations/002.sql"))
+                .map_err(|e| e.to_string())?;
+        }
         connection
-            .execute_batch(include_str!("../migrations/002.sql"))
+            .execute_batch(include_str!("../migrations/003.sql"))
             .map_err(|e| e.to_string())?;
         Ok(Self { connection })
     }
@@ -94,3 +99,6 @@ impl Store {
     }
 }
 mod events;
+
+mod documents;
+pub use documents::DocumentChange;

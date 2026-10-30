@@ -107,7 +107,7 @@ impl Store {
         .collect()
     }
     pub fn rebuild_index(&self) -> Result<()> {
-        self.connection.execute_batch("BEGIN IMMEDIATE; DROP TABLE IF EXISTS event_search;CREATE VIRTUAL TABLE event_search USING fts5(id UNINDEXED,repo_id UNINDEXED,summary);INSERT INTO event_search SELECT id,repo_id,summary FROM events; COMMIT;").map_err(db_error)
+        self.connection.execute_batch("BEGIN IMMEDIATE; DROP TABLE IF EXISTS event_search;CREATE VIRTUAL TABLE event_search USING fts5(id UNINDEXED,repo_id UNINDEXED,summary);INSERT INTO event_search SELECT id,repo_id,summary FROM events; DELETE FROM decision_search; INSERT INTO decision_search SELECT id,repo_id,worktree_id,json_extract(data,'$.summary'),json_extract(data,'$.rationale') FROM documents WHERE kind='decision'; COMMIT;").map_err(db_error)
     }
     pub fn save_comparison(&mut self, c: &Comparison) -> Result<()> {
         let a = self.snapshot(c.base_snapshot_id)?;

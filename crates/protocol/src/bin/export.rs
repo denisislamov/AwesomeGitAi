@@ -32,6 +32,12 @@ fn main() {
         RepoScope,
         Revision,
         BranchRef,
+        ReviewState,
+        HumanReview,
+        DecisionAlternative,
+        DecisionAnchorView,
+        EvidenceView,
+        DecisionView,
         DesktopRequest,
         DesktopEnvelope,
         DesktopResponse

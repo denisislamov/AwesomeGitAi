@@ -360,6 +360,23 @@ pub struct BranchRef {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind", deny_unknown_fields)]
 pub enum DesktopRequest {
+    CreateAgentGrant {
+        scope: RepoScope,
+    },
+    GetDecisions {
+        scope: RepoScope,
+        comparison_id: Uuid,
+        path: RepoPath,
+    },
+    ReviewDecision {
+        scope: RepoScope,
+        decision_id: Uuid,
+        base_snapshot_id: Uuid,
+        target_snapshot_id: Uuid,
+        state: ReviewState,
+        note: String,
+        idempotency_key: Uuid,
+    },
     OpenRepository {
         path: String,
     },
@@ -388,6 +405,18 @@ pub struct DesktopEnvelope {
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(tag = "kind")]
 pub enum DesktopResponse {
+    AgentGrant {
+        token: String,
+        repo_id: Uuid,
+        worktree_id: Uuid,
+    },
+    Decisions {
+        decisions: Vec<DecisionView>,
+        truncated: bool,
+    },
+    Reviewed {
+        review: HumanReview,
+    },
     Repository {
         state: RepoState,
         branches: Vec<BranchRef>,
@@ -411,4 +440,68 @@ pub enum DesktopResponse {
         target: Snapshot,
         observed_generation: String,
     },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, TS, PartialEq)]
+pub enum ReviewState {
+    Viewed,
+    Accepted,
+    Question,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct HumanReview {
+    pub decision_id: Uuid,
+    pub base_snapshot_id: Uuid,
+    pub target_snapshot_id: Uuid,
+    pub state: ReviewState,
+    pub note: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct DecisionAlternative {
+    pub description: String,
+    pub reason_not_chosen: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct DecisionAnchorView {
+    pub anchor: Anchor,
+    pub resolution: AnchorResolution,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct EvidenceView {
+    pub check: String,
+    pub status: String,
+    pub environment: String,
+    pub summary: String,
+}
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
+pub struct DecisionView {
+    pub id: Uuid,
+    pub revision: u32,
+    pub session_id: Uuid,
+    pub summary: String,
+    pub behavior: String,
+    pub rationale: String,
+    pub constraints: Vec<String>,
+    pub alternatives: Vec<DecisionAlternative>,
+    pub anchors: Vec<DecisionAnchorView>,
+    pub evidence: Vec<EvidenceView>,
+    pub source: String,
+    pub superseded_by: Option<Uuid>,
+    pub supersedes: Option<Uuid>,
+    pub supersede_reason: Option<String>,
+    pub base_snapshot_id: Uuid,
+    pub target_snapshot_id: Uuid,
+    pub review: Option<HumanReview>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentEnvelope {
+    pub agent: AgentCall,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct AgentCall {
+    pub token: String,
+    pub tool: String,
+    pub arguments: serde_json::Value,
 }
