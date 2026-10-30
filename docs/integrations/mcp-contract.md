@@ -49,14 +49,14 @@ HTTP MVP локальный, loopback-only, off по умолчанию, отд�
 
 ## Ответы и ошибки
 
-`integration_guide` возвращает доступные текущему principal repo/worktree IDs, понятные имена и наблюдаемую generation для выбора проекта. `context_get` обновляет generation и сообщает полноту/пропуски контекста. Это наблюдаемые версии, не блокировка файлов: `session_open` и `snapshot_capture` сверяют expected generation атомарно и возвращают `STALE_STATE` при изменениях. Нельзя угадывать ID или автоматически выбирать первый проект при неоднозначности.
+`integration_guide` возвращает доступные текущему principal repo/worktree IDs, понятные имена и наблюдаемую generation для выбора проекта. `context_get` обновляет generation и сообщает полноту/пропуски контекста. Это наблюдаемые версии, не блокировка файлов: `session_open` и `snapshot_capture` сверяют expected generation с выбранными файлами; захват дополнительно перепроверяет байты и возвращают `STALE_STATE` при изменениях. Нельзя угадывать ID или автоматически выбирать первый проект при неоднозначности.
 
-Каждый write возвращает `WriteReceipt {event_id, entity_id, revision}` только после durable commit. `session_open` дополнительно возвращает session_id, baseline snapshots/generation и next_actions; `snapshot_capture` — слои HEAD/index/worktree, comparison IDs и anchors-кандидаты. Agent-аргумент `actor` — заявленный источник, не authentication principal; `source` не позволяет создать local-runner или человеческое подтверждение.
+Каждый write возвращает специфичный для инструмента receipt (`session_id`, `decision_id`, `id` или `snapshot_id`, с revision где применимо) только после durable commit. Идентичный повтор возвращает тот же JSON. `session_open` дополнительно возвращает session_id, baseline snapshots/generation и next_actions; `snapshot_capture` — IDs слоёв HEAD/index/worktree и comparison. Номера строк и content_hash агент вычисляет по точным исходным байтам; host проверяет их. Agent-аргумент `actor` — заявленный источник, не authentication principal; `source` не позволяет создать local-runner или человеческое подтверждение.
 
 Ошибки `STALE_STATE`, `REVISION_CONFLICT`, `SCOPE_DENIED`, `UNSUPPORTED_VERSION`, `IDEMPOTENCY_CONFLICT` имеют структурированный code и понятный next_action. Повтор идентичного write с тем же key возвращает прежний receipt; другой payload с тем же key отклоняется. Курсор, token budget и omitted summary не создают иллюзию полной истории.
 
 Trace/diagram schemas — минимальный исполняемый валидатором контракт модели. Они не разрешают исполнение кода. Проверка связности шагов/кадров, совпадения snapshot, return-stack и отсутствия out-of-scope anchors выполняется domain-валидатором. Derived diagram source из MCP всегда остаётся заявлением агента, пока отдельный trusted analyzer не подтвердил его.
 
-## Что будет включено в первый запуск приложения
+## Подключение в текущем macOS MVP
 
-Экран «Подключить агента»: выбрать stdio/HTTP → получить конфигурацию с реальным путём к установленному binary → выполнить диагностический read → скопировать workflow-инструкцию при необходимости. Клиентские `mcpServers` форматы различаются: приложение выдаёт формат конкретного поддерживаемого harness и generic command/args либо URL. В репозитории до появления бинарника не публикуем команду, которая якобы уже работает.
+Кнопка «Подключить MCP» выполняет диагностический read локального host и выдаёт generic `mcpServers` JSON с реальным binary/profile/repo/grant-file и копируемую инструкцию. Специфические настройки IDE различаются. Stdio готов сразу; loopback HTTP включается вручную с отдельным private token-файлом по [инструкции gateway](../../crates/mcp/README.md). Приложение должно оставаться открытым.

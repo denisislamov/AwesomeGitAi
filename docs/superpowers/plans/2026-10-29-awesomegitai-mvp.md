@@ -159,6 +159,8 @@ Wire API и schema fixtures уточняются в T1, не меняя пере
 - [ ] Run suites → PASS; два независимых harness (Rider AI Assistant/stdio и Cursor/Streamable HTTP либо зафиксированные замены) проходят одинаковый сценарий; каждый creates session, edits example, captures snapshot, records rationale/alternative/evidence, supersedes after second change. User sees both versions linked to code; missing rationale remains missing. Save actual host/version/config and redacted protocol transcript. Validate tools-only discovery, missing server instructions, incompatible version, invalid schema, credential rejection, parity/retry/cancellation through both transports; без успешного обоих транспортов MCP milestone не завершён.
 - [ ] Commit `feat: record agent decisions through MCP`. Demo milestone: реальная правка → объяснение в клиенте, без ручного изменения БД.
 
+> Execution update 2026-10-30: T4 implemented for macOS, including both MCP transports, two independent substitute harnesses and real native explanation/review. Movable/resizable panels and native windows added per user. See `docs/architecture/t4-results.md` for scope, review corrections, regression evidence and explicit product/second-monitor limits. Trace/diagram remain T6.
+
 ## T5 · Полный Git-набор MVP
 
 **Files:** create `crates/git/src/{operations.rs,index_transaction.rs,credentials.rs}`, `crates/git/tests/{operations.rs,stage_races.rs}`, `apps/client/src/features/git-actions/{StageSelection.tsx,CommitPanel.tsx,RemoteActions.tsx}`.

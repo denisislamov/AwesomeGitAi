@@ -39,3 +39,13 @@ Implementation commit `6997fbd`: React/Tauri read-only workspace with real local
 The corrected bundle builds. Final manual Cmd+Q recheck is pending Mac unlock; automated shutdown tests pass. T3 implementation is delivered, native acceptance retains that explicit open item. Android/Windows/iOS remain deferred. No T4 implementation has started.
 
 2026-10-30 follow-up: final native Cmd+Q acceptance passed after unlock (repository loaded in final bundle, owned host socket refused connections after Quit). T3 closed. T4 and user-requested movable/resizable panels with separate macOS windows now in progress.
+
+## T4 + IDE docking — implementation and regression
+
+T4 is implemented for the current macOS scope, including stdio/loopback MCP, durable explanation history, immutable anchors and human review. Two independent substitute harnesses pass both transports; actual Rider/Cursor products remain untested. Added movable/resizable dock panels and native detached windows sharing authoritative state. User's later density request normalized Monaco typography, spacing and line height.
+
+Final independent review's two important issues were fixed with RED→GREEN regressions (multi-file original snapshots; detached editor polling identity). Packaged native MCP→explanation→detached human review→redock and Cmd+Q with secondary window were checked. Details/counts/benchmark outlier/physical second-monitor limitation are recorded in [T4 report](../architecture/t4-results.md). No push or merge; T5 not started.
+
+Backend commit: `1d5d113 feat: record agent decisions through MCP`. Final compact bundle is built; Documents access after unsigned rebuild awaits a new macOS permission (TCC confirmed), and a subsequent Mac lock blocked the final visual pass. Temporary-repository bundled MCP succeeds. Earlier native window and Quit acceptance remains recorded; no second-monitor or IDE-product certification is implied.
+
+Desktop/UI commit: `070d65b feat: add snapshot explanations and compact detachable IDE panels`. Final `pnpm test` builds fresh host/gateway before testing: workspace 73 + client32 + probe4 pass; native8 separately pass. Full browser9 pass; final MCP-fixture rerun passes. Working scope remains macOS development build; OS permission follow-up above is explicit.
