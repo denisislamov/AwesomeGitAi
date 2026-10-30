@@ -12,3 +12,6 @@ apps/client/src-tauri/binaries/
 **/playwright-report/
 
 __pycache__/
+
+spikes/code-relations/csharp/bin/
+spikes/code-relations/csharp/obj/

@@ -1,0 +1,1 @@
+{"name":"agai-relations-probe","private":true,"type":"module","scripts":{"test":"node --test typescript.test.mjs"},"devDependencies":{"typescript":"6.0.3"}}
