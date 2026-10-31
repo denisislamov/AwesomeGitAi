@@ -24,6 +24,7 @@ pub(crate) struct Cache {
     root: PathBuf,
     revision: (u64, i64),
     head: Option<String>,
+    image: std::rc::Rc<HistoryImage>,
 }
 fn error(code: &str) -> AppError {
     AppError::new(code)
@@ -374,7 +375,16 @@ impl HostService {
         let digest = current.digest()?;
         let base = self.store.history_base(r.repo_id, r.worktree_id)?;
         if let Some(ref oid) = old {
-            let saved = read_image(dest, oid)?;
+            let saved = self
+                .histories
+                .borrow()
+                .get(&(r.repo_id, r.worktree_id))
+                .filter(|c| c.root == r.root && c.head.as_deref() == Some(oid))
+                .map(|c| c.image.clone());
+            let saved = match saved {
+                Some(image) => image,
+                None => std::rc::Rc::new(read_image(dest, oid)?),
+            };
             if saved.repo_id != r.repo_id || saved.worktree_id != r.worktree_id {
                 return Err(error("HISTORY_SCOPE_MISMATCH"));
             }
@@ -383,17 +393,17 @@ impl HostService {
                 finish_purge(dest)?;
                 self.store
                     .set_history_base(r.repo_id, r.worktree_id, &digest)?;
-                self.cache_history(r, dest)?;
+                self.cache_history(r, dest, current.clone())?;
                 return Ok(());
             }
             if base.is_none() && current.is_empty() {
                 self.store.restore_history(&saved)?;
-                if self.store.history_image(r.repo_id, r.worktree_id)? != saved {
+                if self.store.history_image(r.repo_id, r.worktree_id)? != *saved {
                     return Err(error("HISTORY_RESTORE_MISMATCH"));
                 }
                 self.store
                     .set_history_base(r.repo_id, r.worktree_id, &saved_digest)?;
-                self.cache_history(r, dest)?;
+                self.cache_history(r, dest, (*saved).clone())?;
                 return Ok(());
             }
             if base.as_deref() != Some(&saved_digest) {
@@ -417,16 +427,31 @@ impl HostService {
         }
         self.store
             .set_history_base(r.repo_id, r.worktree_id, &digest)?;
-        self.cache_history(r, dest)?;
+        self.cache_history(r, dest, current)?;
         Ok(())
     }
-    fn cache_history(&self, r: &agai_git::GitReader, dest: &Path) -> Result<()> {
-        self.histories.borrow_mut().insert(
-            (r.repo_id, r.worktree_id),
+    fn cache_history(
+        &self,
+        r: &agai_git::GitReader,
+        dest: &Path,
+        image: HistoryImage,
+    ) -> Result<()> {
+        // Keep parsed checkpoints bounded across repositories. Eviction only
+        // loses an optimization; the next request verifies the image from Git.
+        let mut histories = self.histories.borrow_mut();
+        let key = (r.repo_id, r.worktree_id);
+        if histories.len() >= 4 && !histories.contains_key(&key) {
+            if let Some(first) = histories.keys().next().copied() {
+                histories.remove(&first);
+            }
+        }
+        histories.insert(
+            key,
             Cache {
                 root: r.root.clone(),
                 revision: self.store.history_revision()?,
                 head: head(dest)?,
+                image: std::rc::Rc::new(image),
             },
         );
         Ok(())

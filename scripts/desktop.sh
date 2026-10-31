@@ -7,10 +7,16 @@ if [ -x "$ROOT/.superpowers/toolchain/cargo/bin/cargo" ]; then
  export RUSTUP_HOME="$ROOT/.superpowers/toolchain/rustup"
  export PATH="$CARGO_HOME/bin:$PATH"
 fi
-cargo build -p agai-host -p agai-mcp
+HOST_TARGET=debug
+if [ "${1:-dev}" = build ]; then
+ cargo build --release -p agai-host -p agai-mcp
+ HOST_TARGET=release
+else
+ cargo build -p agai-host -p agai-mcp
+fi
 mkdir -p apps/client/src-tauri/binaries
-cp target/debug/agai-host apps/client/src-tauri/binaries/agai-host
-cp target/debug/agai-mcp apps/client/src-tauri/binaries/agai-mcp
+cp "target/$HOST_TARGET/agai-host" apps/client/src-tauri/binaries/agai-host
+cp "target/$HOST_TARGET/agai-mcp" apps/client/src-tauri/binaries/agai-mcp
 scripts/build-relations.sh
 case "${1:-dev}" in
  build) pnpm --filter @agai/client exec tauri build --debug --bundles app ;;

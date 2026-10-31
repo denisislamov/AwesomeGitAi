@@ -301,3 +301,29 @@ fn selected_ignored_bytes_invalidate_capture() {
         "STALE_STATE"
     );
 }
+
+#[test]
+fn immutable_navigation_reuses_snapshots_and_comparisons_without_writes() {
+    let d = repo();
+    let state = tempfile::tempdir().unwrap();
+    let mut db = Store::open(&state.path().join("db")).unwrap();
+    let r = GitReader::new(d.path()).unwrap();
+    let oid = r.head().unwrap();
+    let paths = [RepoPath::from_bytes(b"a.cs").unwrap()];
+    let a = capture_commit(&r, &mut db, &paths, &oid).unwrap();
+    let c = compare(&mut db, a, a).unwrap();
+    let revision = db.history_revision().unwrap();
+    for _ in 0..5 {
+        assert_eq!(capture_commit(&r, &mut db, &paths, &oid).unwrap(), a);
+        assert_eq!(compare(&mut db, a, a).unwrap().id, c.id);
+    }
+    assert_eq!(db.history_revision().unwrap(), revision);
+    let other = capture_commit(
+        &r,
+        &mut db,
+        &[RepoPath::from_bytes(b"missing.cs").unwrap()],
+        &oid,
+    )
+    .unwrap();
+    assert_ne!(a, other);
+}

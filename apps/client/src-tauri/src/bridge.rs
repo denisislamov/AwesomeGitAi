@@ -11,6 +11,12 @@ use std::{
     },
     time::{Duration, Instant},
 };
+fn transport_error(error: std::io::Error) -> AppError {
+    AppError::new(match error.kind() {
+        std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock => "HOST_TIMEOUT",
+        _ => "HOST_OFFLINE",
+    })
+}
 pub struct DesktopHost {
     pub profile: PathBuf,
     pub binary: PathBuf,
@@ -105,7 +111,7 @@ impl DesktopHost {
         let mut header = [0; 4];
         stream
             .read_exact(&mut header)
-            .map_err(|_| AppError::new("HOST_OFFLINE"))?;
+            .map_err(transport_error)?;
         let len = u32::from_be_bytes(header) as usize;
         if len > 16 * 1024 * 1024 {
             return Err(AppError::new("FRAME_TOO_LARGE"));
@@ -113,7 +119,7 @@ impl DesktopHost {
         let mut data = vec![0; len];
         stream
             .read_exact(&mut data)
-            .map_err(|_| AppError::new("HOST_OFFLINE"))?;
+            .map_err(transport_error)?;
         let response: serde_json::Value =
             serde_json::from_slice(&data).map_err(|_| AppError::new("INVALID_RESPONSE"))?;
         if response["Ok"]["kind"] == "Repository" {
@@ -226,5 +232,17 @@ mod tests {
                 .code,
             "SCOPE_DENIED"
         );
+    }
+}
+
+#[cfg(test)]
+mod timeout_tests {
+    use super::*;
+    #[test]
+    fn local_timeout_is_not_an_offline_host() {
+        for kind in [std::io::ErrorKind::TimedOut, std::io::ErrorKind::WouldBlock] {
+            assert_eq!(transport_error(std::io::Error::from(kind)).code, "HOST_TIMEOUT");
+        }
+        assert_eq!(transport_error(std::io::Error::from(std::io::ErrorKind::BrokenPipe)).code, "HOST_OFFLINE");
     }
 }

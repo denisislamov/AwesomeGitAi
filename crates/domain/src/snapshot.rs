@@ -264,8 +264,28 @@ pub fn capture_commit(
     if ![40, 64].contains(&oid.len()) || !oid.bytes().all(|b| b.is_ascii_hexdigit()) {
         return Err(AppError::new("INVALID_REVISION"));
     }
+    // Version the key when capture policy changes. Immutable Git objects and the
+    // exact path set identify a reusable capture; live captures are never reused.
+    let mut key_paths: Vec<_> = paths.iter().map(|p| p.raw_base64.clone()).collect();
+    key_paths.sort();
+    let key = serde_json::to_vec(&(
+        "commit-capture-v1",
+        r.repo_id,
+        r.worktree_id,
+        oid,
+        key_paths,
+    ))
+    .unwrap();
+    let id = Uuid::new_v5(&Uuid::NAMESPACE_OID, &key);
+    if let Ok(saved) = store.snapshot(id) {
+        if saved.repo_id == r.repo_id && saved.worktree_id == r.worktree_id {
+            return Ok(id);
+        }
+        return Err(AppError::new("SCOPE_DENIED"));
+    }
     r.run(&["cat-file", "-e", &format!("{oid}^{{commit}}")])?;
     let mut s = snap(r, Layer::Commit { oid: oid.into() }, oid);
+    s.id = id;
     for p in paths {
         if sensitive(p) {
             s.exclusions.push(Exclusion {
@@ -316,8 +336,15 @@ pub fn compare(store: &mut Store, base: Uuid, target: Uuid) -> Result<Comparison
             }
         })
         .collect();
+    let id = Uuid::new_v5(
+        &Uuid::NAMESPACE_OID,
+        &serde_json::to_vec(&("path-pairs-v1", base, target)).unwrap(),
+    );
+    if let Ok(saved) = store.comparison(id) {
+        return Ok(saved);
+    }
     let c = Comparison {
-        id: Uuid::new_v4(),
+        id,
         base_snapshot_id: base,
         target_snapshot_id: target,
         file_pairs: pairs,

@@ -443,3 +443,26 @@ it("clicking the active file preserves explanations and avoids reloading them", 
   expect(w.state.explanations).toBe(explanations);
   expect(f.calls.length).toBe(before);
 });
+
+it("ignores an older file explanation within the same reused comparison", async () => {
+  const f = fixture();
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  await w.openFile(path);
+  let finish!: (r: DesktopResponse) => void;
+  f.api.desktop = async () =>
+    new Promise((resolve) => {
+      finish = resolve;
+    });
+  const pending = w.refreshExplanations();
+  const next = {
+    ...w.active()!,
+    id: "other",
+    path: { ...path, display: "Other.cs", raw_base64: btoa("Other.cs") },
+  };
+  w.state.tabs.push(next);
+  w.state.activeTab = next.id;
+  finish({ kind: "Decisions", decisions: [], truncated: true });
+  await pending;
+  expect(w.state.explanationsTruncated).toBe(false);
+});

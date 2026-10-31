@@ -211,9 +211,15 @@ export class Workspace {
     this.listeners.forEach((f) => f());
   }
   error(e: unknown) {
+    const code =
+      typeof e === "object" && e && "code" in e ? String(e.code) : String(e);
     this.patch({
       error:
-        typeof e === "object" && e && "code" in e ? String(e.code) : String(e),
+        code === "HOST_TIMEOUT"
+          ? "The local Git service took too long to respond. Your open code is preserved. Try again shortly."
+          : code === "HOST_OFFLINE"
+            ? "The local Git service is unavailable. This is a local process, not an Internet connection."
+            : code,
       busy: false,
     });
   }
@@ -1040,6 +1046,7 @@ export class Workspace {
       if (
         epoch !== this.epoch ||
         this.active()?.data.comparison.id !== comparisonId ||
+        this.state.activeTab !== tab.id ||
         this.state.openingRepository
       )
         return;
@@ -1052,7 +1059,8 @@ export class Workspace {
     } catch (e) {
       if (
         epoch === this.epoch &&
-        this.active()?.data.comparison.id === comparisonId
+        this.active()?.data.comparison.id === comparisonId &&
+        this.state.activeTab === tab.id
       )
         this.patch({
           explanationsError:
