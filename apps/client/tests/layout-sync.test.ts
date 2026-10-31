@@ -323,3 +323,19 @@ it("ignores detached historical file lookup after switching the active tab", asy
   await pending;
   expect(open).not.toHaveBeenCalled();
 });
+it("accepts smaller and larger font sizes from detached panels", async () => {
+  const w = fixture();
+  const settings = vi.fn();
+  for (const scale of [80, 90, 175, 200]) {
+    await dispatchPanelAction(
+      w,
+      {
+        panel: "files",
+        action: "set_view",
+        payload: { scope: panelSnapshot(w, {}).scope, scale },
+      },
+      settings,
+    );
+    expect(settings).toHaveBeenLastCalledWith({ scale });
+  }
+});

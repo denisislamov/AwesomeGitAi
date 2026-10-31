@@ -873,3 +873,23 @@ test("file list follows open historical code and keeps working changes explicit"
     fullPage: true,
   });
 });
+
+test("font shortcuts resize text without page zoom and persist across reload", async ({
+  page,
+}) => {
+  await page.goto("/e2e/");
+  const app = page.locator("main.app");
+  const size = () => app.evaluate((el) => getComputedStyle(el).fontSize);
+  await expect.poll(size).toBe("15px");
+  await page.keyboard.press("Control+=");
+  await expect.poll(size).toBe("16.5px");
+  await page.keyboard.press("Control+-");
+  await expect.poll(size).toBe("15px");
+  await page.keyboard.press("Meta+-");
+  await expect.poll(size).toBe("13.5px");
+  await page.reload();
+  await expect.poll(size).toBe("13.5px");
+  await page.keyboard.press("Control+0");
+  await expect.poll(size).toBe("15px");
+  await expect(page.locator(".dock-divider").first()).toBeVisible();
+});

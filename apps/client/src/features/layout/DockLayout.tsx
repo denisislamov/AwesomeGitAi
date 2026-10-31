@@ -122,11 +122,11 @@ export function DockLayout({
           style={{
             gridTemplateColumns:
               n.axis === "horizontal"
-                ? `${n.ratio}fr 6px ${1 - n.ratio}fr`
+                ? `${n.ratio}fr 1px ${1 - n.ratio}fr`
                 : undefined,
             gridTemplateRows:
               n.axis === "vertical"
-                ? `${n.ratio}fr 6px ${1 - n.ratio}fr`
+                ? `${n.ratio}fr 1px ${1 - n.ratio}fr`
                 : undefined,
           }}
         >

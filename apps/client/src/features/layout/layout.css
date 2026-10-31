@@ -41,8 +41,8 @@
 .dock-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 4px;
+  padding: 1px 6px;
   background: var(--surface, #3c3836);
   cursor: grab;
   flex: none;
@@ -52,7 +52,7 @@
   font-size: inherit;
 }
 .dock-title button {
-  padding: 2px 6px;
+  padding: 1px 5px;
 }
 .dock-content {
   flex: 1;
@@ -69,8 +69,20 @@
   flex: 1;
 }
 .dock-divider {
+  position: relative;
+  z-index: 5;
   background: var(--border, #504945);
   touch-action: none;
+}
+.dock-divider::after {
+  content: "";
+  position: absolute;
+}
+.horizontal > .dock-divider::after {
+  inset: 0 -3px;
+}
+.vertical > .dock-divider::after {
+  inset: -3px 0;
 }
 .horizontal > .dock-divider {
   cursor: col-resize;
@@ -176,4 +188,9 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 12px 30px #0008;
+}
+
+/* The splitter supplies the shared panel edge. */
+.dock-content > .file-tree {
+  border-right: 0;
 }

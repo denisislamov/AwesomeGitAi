@@ -1,3 +1,4 @@
+import { FONT_SCALES } from "../appearance/fontScale";
 import { Workspace, type WorkspaceApi } from "../../workspace";
 import type {
   RepoPath,
@@ -285,7 +286,7 @@ export async function dispatchPanelAction(
       const v: PanelSettings = {};
       if (p.view === "split" || p.view === "unified") v.view = p.view;
       if (typeof p.light === "boolean") v.light = p.light;
-      if ([100, 110, 125, 150].includes(p.scale)) v.scale = p.scale;
+      if (FONT_SCALES.includes(p.scale)) v.scale = p.scale;
       if (typeof p.showDeleted === "boolean") v.showDeleted = p.showDeleted;
       if (typeof p.ignoreWhitespace === "boolean")
         v.ignoreWhitespace = p.ignoreWhitespace;

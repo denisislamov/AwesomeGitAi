@@ -1,3 +1,9 @@
+import {
+  FONT_SCALES,
+  FONT_SCALE_KEY,
+  readFontScale,
+  fontScaleShortcut,
+} from "./features/appearance/fontScale";
 import { FileNavigator } from "./features/files/FileNavigator";
 import { MemoryDialog } from "./features/memory/MemoryDialog";
 import { RelationsDialog } from "./features/relations/RelationsDialog";
@@ -133,7 +139,13 @@ export function App({
   const [view, setView] = useState<"unified" | "split">("unified");
   const [mode, setMode] = useState("work");
   const [light, setLight] = useState(false);
-  const [scale, setScale] = useState(100);
+  const [scale, setScale] = useState(() => {
+    try {
+      return readFontScale(window.localStorage);
+    } catch {
+      return 100;
+    }
+  });
   const [showDeleted, setShowDeleted] = useState(true);
   const [ignoreWhitespace, setIgnoreWhitespace] = useState(false);
   const [snapA, setSnapA] = useState("");
@@ -152,10 +164,30 @@ export function App({
     if (v.mode) setMode(v.mode);
   };
   const updateSettings = (v: PanelSettings) => {
-    if (workspace instanceof DetachedWorkspace)
+    if (workspace instanceof DetachedWorkspace) {
+      if (v.scale !== undefined) setScale(v.scale);
       void workspace.action("set_view", v);
-    else applySettings(v);
+    } else applySettings(v);
   };
+  useEffect(() => {
+    if (panel) return;
+    try {
+      localStorage.setItem(FONT_SCALE_KEY, String(scale));
+    } catch {
+      /* Storage may be disabled. */
+    }
+  }, [scale, panel]);
+  useEffect(() => {
+    const resize = (event: KeyboardEvent) => {
+      const next = fontScaleShortcut(event, scale);
+      if (next === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+      updateSettings({ scale: next });
+    };
+    window.addEventListener("keydown", resize, true);
+    return () => window.removeEventListener("keydown", resize, true);
+  }, [scale, workspace]);
   useEffect(() => {
     if (workspace.state.recordedLocation?.side === "Old")
       updateSettings({ view: "split" });
@@ -594,7 +626,7 @@ export function App({
                 updateSettings({ scale: Number(e.target.value) })
               }
             >
-              {[100, 110, 125, 150].map((n) => (
+              {FONT_SCALES.map((n) => (
                 <option key={n} value={n}>
                   {n}%
                 </option>
