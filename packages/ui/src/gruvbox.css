@@ -1286,6 +1286,7 @@ code {
 }
 .code-context-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
@@ -1298,6 +1299,7 @@ code {
 }
 .code-actions-host {
   min-width: 0;
+  flex-shrink: 0;
 }
 .code-context-bar .reader-actions {
   border: 0;
@@ -1683,4 +1685,76 @@ code {
   content: "";
   position: absolute;
   inset: 0 -3px;
+}
+
+/* Cached semantic hover: unobtrusive until a symbol is inspected. */
+.prose-symbol {
+  display: inline;
+  font: inherit;
+  color: inherit;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px dotted #bdae9344;
+}
+.relation-linked {
+  background: #fabd2f12;
+  text-decoration: underline;
+  text-decoration-color: #fabd2f55;
+  text-underline-offset: 3px;
+}
+.file-usage-hint {
+  color: var(--muted);
+  white-space: nowrap;
+}
+.relation-threads {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 85;
+}
+.relation-threads path {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.23;
+}
+.relation-hover {
+  position: fixed;
+  z-index: 90;
+  width: min(360px, calc(100vw - 16px));
+  max-height: 270px;
+  overflow: auto;
+  padding: 8px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  box-shadow: 0 6px 20px #0007;
+}
+.relation-hover > small {
+  display: block;
+  margin: 3px 0;
+}
+.usage-preview-list button {
+  display: block;
+  width: 100%;
+}
+.usage-preview-list code {
+  display: block;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9em;
+}
+.explanation-source-details {
+  margin-top: 8px;
+  color: var(--muted);
+}
+.explanation-source-details > summary {
+  cursor: pointer;
 }

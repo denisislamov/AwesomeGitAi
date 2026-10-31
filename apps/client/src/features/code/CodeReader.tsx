@@ -1,3 +1,4 @@
+import { relationTokens } from "../relations/hoverModel";
 import { ConstructDialog } from "./ConstructDialog";
 import { resolveConstruct, type ConstructHelp } from "./language-help";
 import { createPortal } from "react-dom";
@@ -40,6 +41,7 @@ export class RelationsWidget extends WidgetType {
     readonly name: string,
     readonly open: () => void,
     readonly identity = "",
+    readonly symbolId = "",
   ) {
     super();
   }
@@ -53,6 +55,7 @@ export class RelationsWidget extends WidgetType {
   toDOM() {
     const b = document.createElement("button");
     b.className = "code-relations-lens";
+    if (this.symbolId) b.dataset.symbolId = this.symbolId;
     b.textContent = this.label;
     b.setAttribute("aria-label", `Relations for ${this.name}: ${this.label}`);
     b.onclick = this.open;
@@ -491,12 +494,26 @@ export function CodeReader({
                     l.name,
                     () => workspace.showRelations(true, l.symbolId),
                     `${report!.origin_snapshot_id}:${l.symbolId}`,
+                    l.symbolId,
                   ),
                   block: true,
                   side: -1,
                 }).range(entry.view.state.doc.line(l.line).from),
               )
           : [];
+      if (entry.side === "New" && report) {
+        for (const token of relationTokens(
+          report,
+          tab.path,
+          entry.view.state.doc.toString(),
+        ))
+          marks.push(
+            Decoration.mark({
+              class: "relation-token",
+              attributes: { "data-symbol-id": token.id },
+            }).range(token.from, token.to),
+          );
+      }
       entry.view.dispatch({
         effects: entry.relations.reconfigure(
           EditorView.decorations.of(Decoration.set(marks, true)),

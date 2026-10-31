@@ -1,4 +1,8 @@
 import {
+  FileUsageHint,
+  RelationsHover,
+} from "./features/relations/RelationsHover";
+import {
   FONT_SCALES,
   FONT_SCALE_KEY,
   readFontScale,
@@ -339,6 +343,7 @@ export function App({
               </div>
             </details>
           )}
+          <FileUsageHint workspace={workspace} />
           <span className="context-spacer" />
           <div className="code-actions-host" ref={setCodeActionsHost} />
           <button onClick={() => setDialog("editor")}>View options</button>
@@ -407,7 +412,6 @@ export function App({
                 </button>
               </div>
             )}
-            <RelationsDialog workspace={workspace} />
             <CodeReader
               key={tab.id}
               actionsHost={codeActionsHost}
@@ -458,6 +462,8 @@ export function App({
   };
   const dialogs = (
     <>
+      <RelationsHover workspace={workspace} />
+      <RelationsDialog workspace={workspace} />
       {dialog === "memory" && (
         <MemoryDialog
           workspace={workspace}

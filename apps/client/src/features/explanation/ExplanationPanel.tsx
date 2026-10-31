@@ -1,3 +1,4 @@
+import { SymbolText } from "../relations/RelationsHover";
 import React, { useEffect, useMemo, useState } from "react";
 import { isRecordedReview, type Workspace } from "../../workspace";
 import type {
@@ -71,41 +72,14 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
             code version.
           </p>
         )}
-        <h2>
-          {visible.length
-            ? tab && isRecordedReview(tab)
-              ? "About this code"
-              : "Why the code changed"
-            : selection
-              ? "No explanation yet"
-              : "Select lines"}
-        </h2>
+        {!visible.length && (
+          <h2>{selection ? "No explanation yet" : "Select lines"}</h2>
+        )}
         {!visible.length && (
           <p>
             {selection
               ? "The agent has not explained this fragment yet. Diff highlighting does not mean a decision was verified."
               : "Select code and choose Explain selection."}
-          </p>
-        )}
-        {selection && (
-          <div className="context-card" data-testid="explanation-target">
-            <strong>{selection.path.display}</strong>
-            <br />
-            {selection.side === "Old" ? "Old" : "New"} side · lines{" "}
-            {selection.startLine}–{selection.endLine}
-            <br />
-            <small>
-              Snapshot {selection.snapshotId.slice(0, 8)}
-              <br />
-              Comparison {selection.comparisonId.slice(0, 8)}
-            </small>
-          </div>
-        )}
-        {counts && counts.total > 0 && (
-          <p className="quiet-note">
-            Exactly anchored explanations: {counts.explained} of {counts.total}{" "}
-            changed lines (both sides). This measures explanation coverage, not
-            correctness.
           </p>
         )}
         {s.explanationsError && (
@@ -117,6 +91,41 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
         {visible.map((d) => (
           <DecisionCard key={d.id} d={d} workspace={workspace} />
         ))}
+        {tab && (
+          <details className="explanation-source-details">
+            <summary>Source details</summary>
+            <h2>
+              {visible.length
+                ? tab && isRecordedReview(tab)
+                  ? "About this code"
+                  : "Why the code changed"
+                : selection
+                  ? "No explanation yet"
+                  : "Select lines"}
+            </h2>
+            {selection && (
+              <div className="context-card" data-testid="explanation-target">
+                <strong>{selection.path.display}</strong>
+                <br />
+                {selection.side === "Old" ? "Old" : "New"} side · lines{" "}
+                {selection.startLine}–{selection.endLine}
+                <br />
+                <small>
+                  Snapshot {selection.snapshotId.slice(0, 8)}
+                  <br />
+                  Comparison {selection.comparisonId.slice(0, 8)}
+                </small>
+              </div>
+            )}
+            {counts && counts.total > 0 && (
+              <p className="quiet-note">
+                Exactly anchored explanations: {counts.explained} of{" "}
+                {counts.total} changed lines (both sides). This measures
+                explanation coverage, not correctness.
+              </p>
+            )}
+          </details>
+        )}
         {tab && (
           <div className="explanation-actions">
             <button onClick={() => void workspace.refreshExplanations()}>
@@ -166,9 +175,15 @@ function DecisionCard({
         Agent reported · revision {d.revision}
         {d.superseded_by ? " · superseded" : ""}
       </small>
-      <h3>{d.summary}</h3>
-      <p>{d.behavior}</p>
-      <p>{d.rationale}</p>
+      <h3>
+        <SymbolText workspace={workspace} text={d.summary} />
+      </h3>
+      <p>
+        <SymbolText workspace={workspace} text={d.behavior} />
+      </p>
+      <p>
+        <SymbolText workspace={workspace} text={d.rationale} />
+      </p>
       {d.anchors.map((v, i) => {
         const range =
           typeof v.resolution === "object" ? v.resolution.Relocated : v.anchor;

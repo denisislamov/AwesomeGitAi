@@ -97,5 +97,11 @@ it("describes identical recorded code without changed-line coverage", () => {
   render(<ExplanationPanel workspace={w} />);
   expect(screen.getByRole("heading", { name: "About this code" })).toBeTruthy();
   expect(screen.queryByText(/Exactly anchored explanations/)).toBeNull();
+  const details = screen.getByText("Source details").closest("details")!;
+  expect(details.open).toBe(false);
+  expect(
+    screen.getByText("new behavior").compareDocumentPosition(details) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
   cleanup();
 });

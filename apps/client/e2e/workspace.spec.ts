@@ -91,6 +91,7 @@ for (const width of [1280, 1024, 390])
       .getByRole("button", { name: "Explain selection", exact: true })
       .focus();
     await page.keyboard.press("Enter");
+    await page.getByText("Source details", { exact: true }).click();
     await expect(page.getByTestId("explanation-target")).toBeVisible();
     expect(
       await page.evaluate(
@@ -482,6 +483,7 @@ for (const language of ["ts", "cs"])
     page,
     request,
   }) => {
+    test.setTimeout(60000);
     const info = await (await request.get("/test-relations")).json();
     await page.goto("/e2e/");
     await page.getByRole("button", { name: "Choose repository" }).click();
@@ -499,6 +501,26 @@ for (const language of ["ts", "cs"])
     });
     await expect(lens).toBeVisible({ timeout: 20000 });
     await expect(lens).toContainText("found · partial");
+    await lens.hover();
+    const hover = page.getByRole("region", { name: "Usages preview" });
+    await expect(hover).toContainText(`Usage.${language}`);
+    await expect(page.locator(".relation-threads path").first()).toBeAttached();
+    await page.screenshot({
+      path: `../../.superpowers/usage-hover-${language}.png`,
+    });
+    await expect(
+      page.getByRole("button", { name: "File usages", exact: true }),
+    ).toContainText("usages");
+    await hover
+      .getByRole("button")
+      .filter({ hasText: `Usage.${language}` })
+      .first()
+      .click();
+    await expect(page.getByLabel("New code version")).toContainText(
+      language === "ts" ? "spend(20)" : "Spend(20)",
+    );
+    await page.getByRole("button", { name: "← Back", exact: true }).click();
+
     await page
       .locator(".cm-line")
       .filter({ hasText: "return cost + 1" })
