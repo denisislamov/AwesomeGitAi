@@ -1,3 +1,4 @@
+import explanationPolicy from "../../../docs/integrations/explanation-quality.md?raw";
 import {
   transition,
   validateTrace,
@@ -1107,7 +1108,8 @@ export class Workspace {
     return JSON.stringify(
       {
         instruction:
-          "Read integration_guide via AwesomeGitAi MCP. Explain the selected change using recorded facts; preserve provenance and do not invent alternatives or execution results.",
+          "Read integration_guide via AwesomeGitAi MCP and follow explanation_policy. Ask for Junior / Middle / Senior before explaining unless the user already chose for this task. Explain the selected source version using recorded facts; preserve provenance and do not invent alternatives or execution results.",
+        explanation_policy: explanationPolicy,
         schema_version: 1,
         ...this.scope(),
         comparison_id: tab.data.comparison.id,

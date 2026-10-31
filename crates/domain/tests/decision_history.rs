@@ -67,6 +67,21 @@ fn write(mut v: Value) -> Value {
     v
 }
 #[test]
+fn guide_delivers_explanation_policy_without_opening_a_session() {
+    let mut f = Fixture::new();
+    let guide = f
+        .call("integration_guide", json!({"schema_version":1}))
+        .unwrap();
+    let policy = guide["explanation_policy"]
+        .as_str()
+        .expect("tools-only clients need the writing policy inline");
+    assert!(policy.contains("Junior / Middle / Senior"));
+    assert!(policy.contains("Do not record an explanation until"));
+    assert!(policy.contains("CanStart"));
+    assert_eq!(guide["repo_id"], json!(f.reader.repo_id));
+    assert_eq!(guide["schema_version"], 1);
+}
+#[test]
 fn real_decision_retry_supersede_history_and_dirty_baseline() {
     let mut f = Fixture::new();
     let s = f.session();

@@ -201,7 +201,7 @@ impl ServerHandler for Gateway {
             .enable_resources()
             .enable_prompts()
             .build();
-        info.instructions=Some("AwesomeGitAi contract v1. Start with integration_guide (schema_version: 1), available to tools-only clients. Scope is granted locally; no Git mutations or human acceptance. trace_record and diagram_record attach agent-reported educational models to owned snapshots; they never execute code.".into());
+        info.instructions=Some("AwesomeGitAi contract v1. Start with integration_guide (schema_version: 1), available to tools-only clients. Follow its explanation_policy: ask Junior / Middle / Senior once per task unless already chosen; explain concrete behavior and reasons at that level. Scope is granted locally; no Git mutations or human acceptance. trace_record and diagram_record attach agent-reported educational models to owned snapshots; they never execute code.".into());
         info
     }
     async fn list_tools(
@@ -213,11 +213,11 @@ impl ServerHandler for Gateway {
             let mut tool = Tool::default();
             tool.name = name.into();
             tool.description=Some(match name {
-                "integration_guide"=>"Read scoped v1 workflow, examples, identity and next steps before writing.",
+                "integration_guide"=>"Read scoped v1 workflow, explanation_policy, examples, identity and next steps before writing.",
                 "context_get"=>"Read bounded context for the granted repo/worktree, optionally a pinned snapshot and cursor.",
                 "session_open"=>"Open an agent explanation session against the expected repository generation; retain returned IDs and next_actions.",
                 "snapshot_capture"=>"Capture exact source content for this session and expected generation; use returned snapshot and comparison anchors.",
-                "decision_record"=>"Record agent-reported rationale, behavior, alternatives and exact snapshot anchors; cannot create human acceptance.",
+                "decision_record"=>"Record agent-reported rationale, concrete behavior, alternatives and exact snapshot anchors. Follow integration_guide explanation_policy and the user-chosen Junior / Middle / Senior level; cannot create human acceptance.",
                 "trace_record"=>"Record a snapshot-bound educational trace with explicit inputs, assumptions, stack, locals and step links. Not observed execution.",
                 "diagram_record"=>"Record a snapshot-bound diagram with typed nodes/edges and reported, inferred or unknown relationships.",
                 "event_append"=>"Append an agent-reported action, question, clarification or observation to the session.",

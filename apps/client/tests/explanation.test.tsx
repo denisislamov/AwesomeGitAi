@@ -49,6 +49,20 @@ const decision = {
   target_snapshot_id: "target",
   review: null,
 } as DecisionView;
+it("copies audience guidance alongside exact source scope before an agent explains code", () => {
+  const w = new Workspace({ read: vi.fn(), desktop: vi.fn() });
+  w.state.tabs = [tab];
+  w.state.activeTab = tab.id;
+  w.state.repo = { repo_id: "repo", worktree_id: "worktree" } as any;
+  const request = JSON.parse(w.explanationRequest());
+  expect(request.explanation_policy).toContain("Junior / Middle / Senior");
+  expect(request.explanation_policy).toContain(
+    "Do not record an explanation until",
+  );
+  expect(request.path).toBe("a.cs");
+  expect(request.target_snapshot_id).toBe("target");
+  expect(request.comparison_id).toBe("comparison");
+});
 it("counts changed old and new lines, excluding unbound and superseded explanations", () => {
   expect(coverage(tab, [decision])).toEqual({ total: 2, explained: 1 });
   expect(
