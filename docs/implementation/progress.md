@@ -99,3 +99,8 @@ Project Memory adds scoped search, explicit export/import previews, external pro
 ## T7a — sibling history implemented and verified on macOS
 
 Private sibling bare Git, lossless scoped migration, durable pending SQL recovery, stable moved-folder identity, isolated checkpoints and history-aware erase delivered. Compact English disclosure only. Four Important independent-review findings reproduced/fixed. Final Rust144/probe4/UI91/native8, contracts/typecheck/build, browser14 pass. Native prior-data migration, new MCP explanation and Quit/relaunch verified; packaged host restored all Git rows into an empty profile without grants. [Results, decisions and deferred minors](../architecture/t7a-results.md). Local commits only. T8 remains deferred until explicit user authorization.
+
+
+## EFT follow-up — recorded explanations and Git navigation
+
+Added original-snapshot Open code navigation from local Project Memory decisions, empty-context discovery, source-block reveal, current-branch indicator, folder tree and resizable persisted Git sections. Stale history cursors refresh without replacing code; immutable comparisons no longer depend on the live index. Rust144/probe4/UI96/native8, contracts/typecheck/build pass. All 16 browser functional scenarios passed across full/focused runs; benchmark skipped and transient trace timeout documented. Actual EFT CanStart explanation opened with Exact anchors in rebuilt macOS UI; EFT HEAD/status unchanged. [Results and validation details](../architecture/git-memory-ux-results.md). T8 remains deferred; no push.

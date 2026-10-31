@@ -289,12 +289,16 @@ impl HostService {
             } => {
                 path.bytes()?;
                 let r = self.reader(scope.repo_id, scope.worktree_id)?;
-                let observed_generation = r.state()?.generation;
                 let live = matches!(base, Revision::Head | Revision::Index | Revision::Worktree)
                     || matches!(
                         target,
                         Revision::Head | Revision::Index | Revision::Worktree
                     );
+                let observed_generation = if live {
+                    r.state()?.generation
+                } else {
+                    "immutable".into()
+                };
                 let captured = if live {
                     let generation = r.generation_for_paths(&[path.clone()])?;
                     Some(agai_domain::capture(

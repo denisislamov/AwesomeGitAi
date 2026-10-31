@@ -321,3 +321,91 @@ it("clears stored context immediately even if reopening fails after erasure", as
   expect(w.state.explanations).toEqual([]);
   expect(w.state.learningItems).toEqual([]);
 });
+
+it("opens recorded explanations on their immutable snapshot pair and switches from Diagram", async () => {
+  const f = fixture();
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  w.setLearningMode("diagram");
+  const read = f.api.read.bind(f.api);
+  f.api.read = async (r) =>
+    r.kind === "GetComparison"
+      ? ({
+          kind: "Comparison",
+          comparison: {
+            id: "saved",
+            base_snapshot_id: "before",
+            target_snapshot_id: "after",
+            pairs: [],
+            renames: [],
+          },
+        } as any)
+      : read(r);
+  const desktop = f.api.desktop.bind(f.api);
+  f.api.desktop = async (r) => {
+    const result = await desktop(r);
+    if (result.kind === "FileComparison") {
+      result.base.id = "before";
+      result.target.id = "after";
+    }
+    return result;
+  };
+  const opened = await w.openRecordedAnchor({
+    comparison_id: "saved",
+    snapshot_id: "after",
+    path: "Code.cs",
+    side: "new",
+    start_line: 1,
+    end_line: 1,
+  });
+  expect(opened).toBe(true);
+  expect(w.state.learningMode).toBe("explanation");
+  expect(w.active()?.base).toEqual({ Snapshot: { id: "before" } });
+  expect(w.active()?.target).toEqual({ Snapshot: { id: "after" } });
+  expect(w.state.selection?.snapshotId).toBe("after");
+});
+it("rejects an anchor whose snapshot does not match its saved comparison", async () => {
+  const f = fixture();
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  f.api.read = async () =>
+    ({
+      kind: "Comparison",
+      comparison: {
+        id: "saved",
+        base_snapshot_id: "before",
+        target_snapshot_id: "after",
+        pairs: [],
+        renames: [],
+      },
+    }) as any;
+  expect(
+    await w.openRecordedAnchor({
+      comparison_id: "saved",
+      snapshot_id: "foreign",
+      path: "Code.cs",
+      side: "new",
+      start_line: 1,
+      end_line: 1,
+    }),
+  ).toBe(false);
+  expect(w.active()).toBeUndefined();
+});
+
+it("refreshes an expired history cursor without replacing open code", async () => {
+  const f = fixture();
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  await w.openFile(path);
+  const pinned = w.active();
+  w.state.cursor = "expired";
+  const read = f.api.read.bind(f.api);
+  f.api.read = async (r) => {
+    if (r.kind === "ListHistory" && r.cursor) throw { code: "STALE_STATE" };
+    return read(r);
+  };
+  await w.more();
+  expect(w.state.error).toBeNull();
+  expect(w.active()).toBe(pinned);
+  expect(w.state.historyStale).toBe(false);
+});

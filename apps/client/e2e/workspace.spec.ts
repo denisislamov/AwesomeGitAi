@@ -29,7 +29,9 @@ test("real host: code, old side, history selection, stale state and keyboard exp
   await page.getByRole("button", { name: "Close View options" }).click();
   await expect(page.getByTestId("explanation-target")).toHaveText(target!);
   await page.getByRole("button", { name: "Commit Initial wallet" }).click();
-  await expect(page.getByLabel("Commit details")).toContainText("UI Test");
+  await expect(
+    page.getByLabel("Commit details", { exact: true }),
+  ).toContainText("UI Test");
   await expect(page.locator(".cm-content").last()).toContainText("50");
   await page
     .getByRole("button", { name: "Branch feature", exact: true })
@@ -197,7 +199,7 @@ test("historical root commit and snapshot comparison keep working tab intact", a
   await page.locator(".revision-details summary").click();
   await page.getByRole("button", { name: "Commit Initial wallet" }).click();
   await page
-    .getByLabel("Commit details")
+    .getByLabel("Commit details", { exact: true })
     .getByRole("button", { name: "Code.cs", exact: true })
     .click();
   await expect(page.locator(".cm-content")).toContainText("Balance = 30");
@@ -232,7 +234,7 @@ test("chosen base lists files deleted before the target parent", async ({
   await page.getByRole("button", { name: "Use as comparison base" }).click();
   await page.getByRole("button", { name: "Commit Document wallet" }).click();
   await page
-    .getByLabel("Commit details")
+    .getByLabel("Commit details", { exact: true })
     .getByRole("button", { name: "EarlierDeleted.cs", exact: true })
     .click();
   await expect(page.getByText("File deleted", { exact: true })).toBeVisible();
@@ -676,7 +678,9 @@ test("project memory previews, exports, imports and retains external provenance 
     .click();
   await memory.getByRole("checkbox", { name: /Map this bundle/ }).check();
   await memory.getByRole("button", { name: "Import ZIP", exact: true }).click();
-  await expect(memory.getByRole("status")).toContainText("snapshots as external context");
+  await expect(memory.getByRole("status")).toContainText(
+    "snapshots as external context",
+  );
   await open();
   await expect(memory).toContainText("External");
   await memory
@@ -684,4 +688,110 @@ test("project memory previews, exports, imports and retains external provenance 
     .click();
   await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
   await expect(page.getByLabel("New code version")).toContainText("75");
+});
+
+test("saved explanation opens original code and Git panes resize", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  const info = await (await request.get("/test-info")).json();
+  expect((await request.post("/test-mcp-seed")).ok()).toBeTruthy();
+  await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await page.getByLabel("Repository path").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Open repository", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Diagram", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Browse recorded explanations" })
+    .click();
+  const memory = page.getByRole("dialog", {
+    name: "Project memory",
+    exact: true,
+  });
+  await memory
+    .locator("summary")
+    .filter({ hasText: "Начальный баланс 75" })
+    .first()
+    .click();
+  await memory
+    .getByRole("button", { name: /^Open code/ })
+    .first()
+    .click();
+  await expect(memory).not.toBeVisible();
+  await expect(page.locator(".cm-content").last()).toContainText("75");
+  await expect(
+    page.getByRole("complementary", { name: "Explanation" }),
+  ).toContainText("Начальный баланс 75");
+  await expect(
+    page.getByRole("button", { name: /^Current branch / }),
+  ).toBeVisible();
+  for (const name of ["Branches width", "Commit details width"]) {
+    const split = page.getByRole("separator", { name, exact: true });
+    const before = await split.getAttribute("aria-valuenow");
+    const pane = page.locator(
+      name === "Branches width"
+        ? ".git-log .branches"
+        : ".git-log .commit-details",
+    );
+    const paneBefore = (await pane.boundingBox())!.width;
+    const box = (await split.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + 20);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 45, box.y + 20);
+    await page.mouse.up();
+    await expect(split).not.toHaveAttribute("aria-valuenow", before!);
+    await expect
+      .poll(async () => (await pane.boundingBox())!.width)
+      .not.toBe(paneBefore);
+  }
+  await page.setViewportSize({ width: 600, height: 850 });
+  const narrowPane = page.locator(".git-log .commit-details");
+  const narrowBefore = (await narrowPane.boundingBox())!.width;
+  await page
+    .getByRole("separator", { name: "Commit details width", exact: true })
+    .focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(async () => (await narrowPane.boundingBox())!.width)
+    .not.toBe(narrowBefore);
+});
+
+test("recorded navigation reveals an offscreen code block", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  const info = await (await request.get("/test-info")).json();
+  expect((await request.post("/test-mcp-seed")).ok()).toBeTruthy();
+  await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await page.getByLabel("Repository path").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Open repository", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Browse recorded explanations" })
+    .click();
+  const memory = page.getByRole("dialog", {
+    name: "Project memory",
+    exact: true,
+  });
+  await memory
+    .locator("summary")
+    .filter({ hasText: "Deep recorded block" })
+    .first()
+    .click();
+  await memory
+    .getByRole("button", { name: /^Open code/ })
+    .first()
+    .click();
+  await expect(
+    page
+      .locator(".cm-line")
+      .filter({ hasText: /^\/\/ line 1499$/ })
+      .last(),
+  ).toBeInViewport();
 });

@@ -1,3 +1,5 @@
+import { BranchTree } from "./BranchTree";
+import { GitSplitter } from "./GitSplitter";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { Workspace } from "../../workspace";
 import type {
@@ -30,6 +32,26 @@ export function graphRows(commits: Commit[]) {
 export function GitLog({ workspace }: { workspace: Workspace }) {
   const s = workspace.state;
   const list = useRef<HTMLDivElement>(null);
+  const [widths, setWidths] = useState(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem("agai-git-panes-v1") ?? "null");
+      if (
+        Array.isArray(v) &&
+        v.length === 2 &&
+        v.every((n) => Number.isFinite(n) && n >= 130 && n <= 700)
+      )
+        return v as number[];
+    } catch {}
+    return [235, 290];
+  });
+  const resize = (index: number, value: number) =>
+    setWidths((old) => {
+      const next = old.map((n, i) => (i === index ? value : n));
+      try {
+        localStorage.setItem("agai-git-panes-v1", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   const [scroll, setScroll] = useState(0);
   const [search, setSearch] = useState("");
   const [details, setDetails] = useState<Extract<
@@ -104,34 +126,47 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
           Load more
         </button>
       </div>
-      <div className="git-body">
+      <div
+        className="git-body"
+        style={
+          {
+            "--git-branches": `${widths[0]}px`,
+            "--git-details": `${widths[1]}px`,
+          } as React.CSSProperties
+        }
+      >
         <nav className="branches" aria-label="Branches">
+          <div className="git-current">
+            {s.repo?.branch ? (
+              <button
+                title={s.repo.branch}
+                aria-label={`Current branch ${s.repo.branch}`}
+                onClick={() => workspace.filterBranch(s.repo!.branch!)}
+              >
+                Current: {s.repo.branch}
+              </button>
+            ) : (
+              <span>Detached HEAD {s.repo?.head_oid?.slice(0, 8) ?? ""}</span>
+            )}
+          </div>
           <button
             aria-pressed={s.branchFilter === "all"}
             onClick={() => workspace.filterBranch("all")}
           >
             All branches
           </button>
-          {[false, true].map((remote) => (
-            <React.Fragment key={String(remote)}>
-              <h4>{remote ? "REMOTE" : "LOCAL"}</h4>
-              {s.branches
-                .filter((b) => b.remote === remote)
-                .map((b) => (
-                  <button
-                    key={b.name}
-                    title={b.name}
-                    aria-label={`Branch ${b.name}`}
-                    aria-pressed={s.branchFilter === b.name}
-                    onClick={() => workspace.filterBranch(b.name)}
-                  >
-                    ⑂ {b.name}
-                    {s.repo?.branch === b.name ? " · HEAD" : ""}
-                  </button>
-                ))}
-            </React.Fragment>
-          ))}
+          <BranchTree
+            branches={s.branches}
+            current={s.repo?.branch ?? null}
+            selected={s.branchFilter}
+            onSelect={(name) => workspace.filterBranch(name)}
+          />
         </nav>
+        <GitSplitter
+          label="Branches width"
+          value={widths[0]}
+          onChange={(v) => resize(0, v)}
+        />
         <div
           ref={list}
           className="commit-list"
@@ -215,6 +250,12 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
             ))}
           </div>
         </div>
+        <GitSplitter
+          label="Commit details width"
+          value={widths[1]}
+          onChange={(v) => resize(1, v)}
+          invert
+        />
         <aside className="commit-details" aria-label="Commit details">
           {details ? (
             <>

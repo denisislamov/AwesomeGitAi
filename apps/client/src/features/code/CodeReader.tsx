@@ -359,6 +359,30 @@ export function CodeReader({
     };
   }, [tab.data, view, light, ignoreWhitespace]);
   useEffect(() => {
+    const target = workspace.state.recordedLocation;
+    if (
+      !target ||
+      target.comparisonId !== tab.data.comparison.id ||
+      target.path.raw_base64 !== tab.path.raw_base64
+    )
+      return;
+    const v = markerEditors.current.find(
+      (entry) => entry.side === target.side,
+    )?.view;
+    if (!v) return;
+    const start = v.state.doc.line(
+      Math.min(v.state.doc.lines, target.startLine),
+    );
+    const end = v.state.doc.line(Math.min(v.state.doc.lines, target.endLine));
+    const reveal = requestAnimationFrame(() =>
+      v.dispatch({
+        selection: { anchor: start.from, head: end.to },
+        effects: EditorView.scrollIntoView(start.from, { y: "center" }),
+      }),
+    );
+    return () => cancelAnimationFrame(reveal);
+  }, [workspace.state.recordedLocation, tab.data, view]);
+  useEffect(() => {
     const selected = workspace.state.learningLocation;
     const v = editor.current;
     if (

@@ -87,6 +87,13 @@ fn desktop_reads_real_files_and_comparisons_without_changing_git() {
         json!({"kind":"CompareFile","scope":scope,"path":path,"base":{"Commit":{"oid":"--help"}},"target":"Worktree"}),
     );
     assert!(invalid.get("Err").is_some());
+    // Saved code must remain readable even if the live index is temporarily invalid.
+    std::fs::write(repo.join(".git/index"), b"invalid live index").unwrap();
+    let pinned = rpc(
+        &db,
+        json!({"kind":"CompareFile","scope":scope,"path":path,"base":{"Snapshot":{"id":data["base"]["id"]}},"target":{"Snapshot":{"id":data["target"]["id"]}}}),
+    );
+    assert_eq!(pinned["Ok"]["kind"], "FileComparison", "{pinned}");
 }
 #[test]
 fn desktop_does_not_allow_principal_forgery_or_arbitrary_commands() {

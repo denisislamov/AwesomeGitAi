@@ -152,6 +152,10 @@ export function App({
       void workspace.action("set_view", v);
     else applySettings(v);
   };
+  useEffect(() => {
+    if (workspace.state.recordedLocation?.side === "Old")
+      updateSettings({ view: "split" });
+  }, [workspace.state.recordedLocation]);
   const settings = { view, light, scale, showDeleted, ignoreWhitespace, mode };
   const shared = useRef(panelSnapshot(workspace, settings));
   shared.current = panelSnapshot(workspace, settings);
@@ -476,7 +480,12 @@ export function App({
         )}
       </section>
     ),
-    explanation: <LearningPanel workspace={workspace} />,
+    explanation: (
+      <LearningPanel
+        workspace={workspace}
+        onBrowseMemory={panel ? undefined : () => commandRef.current("memory")}
+      />
+    ),
     git: (
       <div className="git-panel-content">
         {panel && (

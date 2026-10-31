@@ -5,7 +5,7 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import type { DesktopRequest } from "../../../../../packages/api/src/generated";
-import type { Workspace } from "../../workspace";
+import type { Workspace, RecordedAnchor } from "../../workspace";
 import { Dialog } from "../commands/CommandUI";
 import "./memory.css";
 
@@ -67,15 +67,22 @@ export function MemoryDialog({
   const key = JSON.stringify([state.repo?.repo_id, state.repo?.worktree_id]);
   return (
     <Dialog title="Project memory" onClose={onClose}>
-      <MemoryContent key={key} workspace={workspace} onErased={onErased} />
+      <MemoryContent
+        key={key}
+        workspace={workspace}
+        onErased={onErased}
+        onNavigate={onClose}
+      />
     </Dialog>
   );
 }
 function MemoryContent({
   workspace,
   onErased,
+  onNavigate,
 }: {
   workspace: Workspace;
+  onNavigate: () => void;
   onErased?: () => void;
 }) {
   const scope = workspace.state.repo ? workspace.scope() : null;
@@ -322,6 +329,42 @@ function MemoryContent({
                       acceptance or instructions.
                     </p>
                   )}
+                  {!item.external &&
+                    item.kind === "decision" &&
+                    Array.isArray(item.data.anchors) && (
+                      <div aria-label="Explained code locations">
+                        <small>
+                          Open the recorded snapshot pair, independently of the
+                          current branch.
+                        </small>
+                        {item.data.anchors.map((entry, index) => {
+                          const anchor = entry as RecordedAnchor;
+                          return (
+                            <button
+                              key={index}
+                              disabled={busy}
+                              onClick={async () => {
+                                setBusy(true);
+                                setError("");
+                                const opened =
+                                  await workspace.openRecordedAnchor(anchor);
+                                if (!valid()) return;
+                                setBusy(false);
+                                if (opened) onNavigate();
+                                else
+                                  setError(
+                                    workspace.state.error ??
+                                      "Could not open the recorded code.",
+                                  );
+                              }}
+                            >
+                              Open code · {text(anchor.path)}:
+                              {anchor.start_line}–{anchor.end_line}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   <dl>
                     {[
                       "summary",

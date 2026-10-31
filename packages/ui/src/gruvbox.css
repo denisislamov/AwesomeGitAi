@@ -1459,3 +1459,93 @@ code {
 .light .cm-trace-source {
   color: #775400;
 }
+
+/* Internal Git sections resize independently from the outer dock. */
+.git-log {
+  container-type: inline-size;
+}
+.git-log .git-body {
+  display: grid;
+  grid-template-columns:
+    minmax(130px, min(var(--git-branches, 235px), 35%))
+    5px minmax(120px, 1fr) 5px minmax(
+      160px,
+      min(var(--git-details, 290px), 40%)
+    );
+  overflow: hidden;
+}
+.git-log .branches,
+.git-log .commit-details {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  display: block;
+}
+.git-log .branches {
+  padding: 4px;
+}
+.git-log .branches button {
+  width: 100%;
+  text-align: left;
+}
+.git-log .branches h4 {
+  display: block;
+  margin: 8px 4px 3px;
+}
+.git-current {
+  position: sticky;
+  top: -4px;
+  z-index: 1;
+  background: var(--panel);
+  padding: 3px 0 5px;
+  border-bottom: 1px solid var(--border);
+}
+.git-log .git-current button {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--accent);
+}
+.branches button[aria-current="true"] {
+  color: var(--accent);
+  font-weight: bold;
+}
+.branch-children {
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+  margin-left: 5px;
+}
+.branches summary {
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 3px 4px;
+}
+.git-splitter {
+  cursor: col-resize;
+  background: var(--border);
+  touch-action: none;
+}
+.git-splitter:hover,
+.git-splitter:focus-visible {
+  background: var(--accent);
+  outline: none;
+}
+@container (max-width: 650px) {
+  .git-log .git-body {
+    grid-template-columns: minmax(100px, 1fr) 5px minmax(
+        100px,
+        min(var(--git-details, 290px), 60%)
+      );
+    grid-template-rows: 90px minmax(0, 1fr);
+  }
+  .git-log .branches {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--border);
+    overflow: auto;
+  }
+  .git-log .branches + .git-splitter {
+    display: none;
+  }
+  .git-log .commit-list {
+    height: auto;
+  }
+}

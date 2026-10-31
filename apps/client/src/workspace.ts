@@ -23,6 +23,14 @@ import type {
   SourceLocation,
   CodeRelationsReport,
 } from "../../../packages/api/src/generated";
+export type RecordedAnchor = {
+  comparison_id: string;
+  snapshot_id: string;
+  path: string;
+  side: "old" | "new";
+  start_line: number;
+  end_line: number;
+};
 export interface WorkspaceApi {
   read(request: ReadRequest): Promise<ReadResponse>;
   desktop(request: DesktopRequest): Promise<DesktopResponse>;
@@ -59,6 +67,7 @@ export type RelationsState = {
   symbolId: string | null;
 };
 type State = {
+  recordedLocation: CodeSelection | null;
   relations: RelationsState | null;
   relationBack: {
     tab: CodeTab;
@@ -125,6 +134,7 @@ export class Workspace {
   state: State = {
     relations: null,
     relationBack: null,
+    recordedLocation: null,
     relationLocation: null,
     learningMode: "explanation",
     learningItems: [],
@@ -690,6 +700,71 @@ export class Workspace {
     });
     void this.refreshExplanations();
   }
+  async openRecordedAnchor(anchor: RecordedAnchor): Promise<boolean> {
+    if (!this.state.repo || this.state.openingRepository) return false;
+    const epoch = this.epoch;
+    const opening = this.opening;
+    try {
+      if (
+        !anchor ||
+        typeof anchor.path !== "string" ||
+        !["old", "new"].includes(anchor.side) ||
+        !Number.isInteger(anchor.start_line) ||
+        !Number.isInteger(anchor.end_line) ||
+        anchor.start_line < 1 ||
+        anchor.end_line < anchor.start_line
+      )
+        throw Error("INVALID_ANCHOR");
+      const r = await this.api.read({
+        kind: "GetComparison",
+        ...this.scope(),
+        comparison_id: anchor.comparison_id,
+      });
+      if (epoch !== this.epoch || opening !== this.opening) return false;
+      if (r.kind !== "Comparison") throw Error("INVALID_RESPONSE");
+      const pair = r.comparison;
+      if (
+        (anchor.side === "old"
+          ? pair.base_snapshot_id
+          : pair.target_snapshot_id) !== anchor.snapshot_id
+      )
+        throw Error("INVALID_ANCHOR");
+      const path: RepoPath = {
+        display: anchor.path,
+        raw_base64: btoa(
+          Array.from(new TextEncoder().encode(anchor.path), (b) =>
+            String.fromCharCode(b),
+          ).join(""),
+        ),
+        encoding: "unix_bytes",
+      };
+      await this.openFile(
+        path,
+        { Snapshot: { id: pair.base_snapshot_id } },
+        { Snapshot: { id: pair.target_snapshot_id } },
+      );
+      const active = this.active();
+      if (
+        epoch !== this.epoch ||
+        !active ||
+        active.path.raw_base64 !== path.raw_base64 ||
+        active.data.base.id !== pair.base_snapshot_id ||
+        active.data.target.id !== pair.target_snapshot_id
+      )
+        return false;
+      this.setLearningMode("explanation");
+      this.explain(
+        anchor.side === "old" ? "Old" : "New",
+        anchor.start_line,
+        anchor.end_line,
+      );
+      this.patch({ recordedLocation: this.state.selection });
+      return true;
+    } catch (e) {
+      if (epoch === this.epoch) this.error(e);
+      return false;
+    }
+  }
   async openFile(
     path: RepoPath,
     base: Revision = "Index",
@@ -746,6 +821,7 @@ export class Workspace {
         busy: false,
       });
       void this.refreshExplanations();
+      return;
     } catch (e) {
       if (epoch === this.epoch && serial === this.opening) this.error(e);
     }
@@ -821,7 +897,10 @@ export class Workspace {
         cursor: r.page.cursor,
       });
     } catch (e) {
-      this.error(e);
+      if (epoch !== this.epoch || cursor !== this.state.cursor) return;
+      if ((e as { code?: string })?.code === "STALE_STATE")
+        await this.refreshHistory();
+      else this.error(e);
     }
   }
   async poll() {
@@ -892,6 +971,7 @@ export class Workspace {
       )
         return;
       this.patch({
+        error: null,
         branches: repo.branches,
         commits: page.page.commits,
         cursor: page.page.cursor,

@@ -3,7 +3,13 @@ import type { Workspace } from "../../workspace";
 import { ExplanationPanel } from "../explanation/ExplanationPanel";
 import { TracePlayer } from "./TracePlayer";
 import { DiagramPanel } from "../diagram/DiagramPanel";
-export function LearningPanel({ workspace: w }: { workspace: Workspace }) {
+export function LearningPanel({
+  workspace: w,
+  onBrowseMemory,
+}: {
+  workspace: Workspace;
+  onBrowseMemory?: () => void;
+}) {
   const s = w.state;
   return (
     <div className="learning-panel">
@@ -18,6 +24,15 @@ export function LearningPanel({ workspace: w }: { workspace: Workspace }) {
           </button>
         ))}
       </div>
+      {!w.active() && s.repo && onBrowseMemory && (
+        <div className="learning-content">
+          <button onClick={onBrowseMemory}>Browse recorded explanations</button>
+          <p>
+            Open a saved explanation to see its code. Steps and diagrams are
+            separate recorded artifacts.
+          </p>
+        </div>
+      )}
       {s.learningMode === "explanation" ? (
         <ExplanationPanel workspace={w} />
       ) : (
