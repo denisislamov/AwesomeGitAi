@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import type { Workspace } from "../../workspace";
+import { isRecordedReview, type Workspace } from "../../workspace";
 import type {
   AnchorResolution,
   DecisionView,
@@ -73,7 +73,9 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
         )}
         <h2>
           {visible.length
-            ? "Why the code changed"
+            ? tab && isRecordedReview(tab)
+              ? "About this code"
+              : "Why the code changed"
             : selection
               ? "No explanation yet"
               : "Select lines"}
@@ -99,7 +101,7 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
             </small>
           </div>
         )}
-        {counts && (
+        {counts && counts.total > 0 && (
           <p className="quiet-note">
             Exactly anchored explanations: {counts.explained} of {counts.total}{" "}
             changed lines (both sides). This measures explanation coverage, not

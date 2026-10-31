@@ -1,5 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { revisionLabel, type Workspace } from "../../workspace";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  revisionLabel,
+  isRecordedReview,
+  type Workspace,
+} from "../../workspace";
 import type {
   RepoPath,
   Revision,
@@ -23,12 +27,20 @@ export function FileNavigator({
     s.repo?.worktree_id,
     historical ? [tab?.base, tab?.target] : "working",
   ]);
-  const [choice, setChoice] = useState<{ key: string; mode: Mode } | null>(
-    null,
-  );
+  const [choice, setChoice] = useState<{
+    key: string;
+    mode: Mode;
+    destinationKey?: string;
+  } | null>(null);
   const mode =
-    choice?.key === key ? choice.mode : historical ? "comparison" : "working";
+    choice && (choice.key === key || choice.destinationKey === key)
+      ? choice.mode
+      : historical
+        ? "comparison"
+        : "working";
   const [filter, setFilter] = useState("");
+  const [openingPath, setOpeningPath] = useState<string | null>(null);
+  const openingSerial = useRef(0);
   const [result, setResult] = useState<{
     key: string;
     paths: RepoPath[];
@@ -77,7 +89,7 @@ export function FileNavigator({
     ) ?? [],
   );
   let paths = s.paths;
-  let recorded = false;
+  let recorded = !!tab && isRecordedReview(tab);
   const status = new Map<string, string>();
   if (mode === "comparison" && tab) {
     if (commit) paths = result?.key === key ? result.paths : [];
@@ -94,7 +106,7 @@ export function FileNavigator({
           b = next.get(id);
         return a?.state !== b?.state || a?.sha256 !== b?.sha256;
       });
-      recorded = differences.length === 0;
+      recorded = recorded && differences.length === 0;
       paths = (
         recorded
           ? [...all].filter(([, f]) => f.state !== "Absent")
@@ -133,7 +145,12 @@ export function FileNavigator({
   const open = (p: RepoPath) => {
     if (mode === "all")
       setChoice({
-        key: JSON.stringify([s.repo?.repo_id, s.repo?.worktree_id, "working"]),
+        key,
+        destinationKey: JSON.stringify([
+          s.repo?.repo_id,
+          s.repo?.worktree_id,
+          "working",
+        ]),
         mode: "all",
       });
     const pair: [Revision, Revision] =
@@ -142,7 +159,11 @@ export function FileNavigator({
         : stagingMode === "index"
           ? ["Head", "Index"]
           : ["Index", "Worktree"];
-    void w.openFile(p, ...pair);
+    const serial = ++openingSerial.current;
+    setOpeningPath(p.display);
+    void w.openFile(p, ...pair).finally(() => {
+      if (serial === openingSerial.current) setOpeningPath(null);
+    });
   };
   return (
     <aside className="file-tree" aria-label="Repository files">
@@ -153,7 +174,11 @@ export function FileNavigator({
         onChange={(e) => setChoice({ key, mode: e.target.value as Mode })}
       >
         <option value="comparison" disabled={!tab}>
-          Comparison files
+          {recorded
+            ? "Recorded files"
+            : commit
+              ? "Commit changes"
+              : "Comparison files"}
         </option>
         <option value="working">Working changes</option>
         <option value="all">All files</option>
@@ -164,8 +189,10 @@ export function FileNavigator({
           title={`${revisionLabel(tab.base)} → ${revisionLabel(tab.target)}`}
         >
           {recorded
-            ? "Recorded files · no differences"
-            : "Files in open comparison"}
+            ? "Saved explanation · identical versions, no + / −"
+            : commit
+              ? `${revisionLabel(tab.base)} → ${revisionLabel(tab.target)} · changed files`
+              : "Files in open comparison"}
         </small>
       )}
       <input
@@ -174,6 +201,11 @@ export function FileNavigator({
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
+      {openingPath && (
+        <p role="status" className="empty-small">
+          Opening {openingPath.split("/").at(-1)}…
+        </p>
+      )}
       <div className="file-list">
         {[...groups].map(([dir, files]) => (
           <details key={dir} open>

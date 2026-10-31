@@ -75,3 +75,27 @@ it("human acceptance is absent for another pair and alternatives are not fabrica
   ).toBeTruthy();
   cleanup();
 });
+
+it("describes identical recorded code without changed-line coverage", () => {
+  const w = new Workspace({ read: vi.fn(), desktop: vi.fn() });
+  const saved = {
+    ...tab,
+    base: { Snapshot: { id: "base" } },
+    target: { Snapshot: { id: "target" } },
+    data: {
+      ...tab.data,
+      base: { ...tab.data.base, files: [{ ...file("same"), sha256: "same" }] },
+      target: {
+        ...tab.data.target,
+        files: [{ ...file("same"), sha256: "same" }],
+      },
+    },
+  } as CodeTab;
+  w.state.tabs = [saved];
+  w.state.activeTab = saved.id;
+  w.state.explanations = [decision];
+  render(<ExplanationPanel workspace={w} />);
+  expect(screen.getByRole("heading", { name: "About this code" })).toBeTruthy();
+  expect(screen.queryByText(/Exactly anchored explanations/)).toBeNull();
+  cleanup();
+});

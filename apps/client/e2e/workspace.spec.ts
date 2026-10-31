@@ -258,6 +258,7 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   request,
 }) => {
   const info = await (await request.get("/test-info")).json();
+  test.setTimeout(60000);
   const seeded = await request.post("/test-mcp-seed");
   expect(seeded.ok()).toBeTruthy();
   await page.goto("/e2e/");
@@ -297,6 +298,11 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   await expect(
     page.getByText("Your review: Accepted", { exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
+  await expect(
+    page.getByText("Your review: Accepted", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("File list scope").selectOption("working");
   await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
   await expect(
     page.getByText("Your review: Accepted", { exact: true }),
@@ -529,7 +535,7 @@ for (const language of ["ts", "cs"])
       language === "ts" ? "spend(20)" : "Spend(20)",
     );
     await expect(page.locator(".revision-details summary")).toContainText(
-      "Recorded version",
+      "Recorded code · no changes",
     );
     await page.locator(".revision-details summary").click();
     await expect(page.getByTestId("base-version-id")).not.toHaveText(

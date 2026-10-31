@@ -409,3 +409,37 @@ it("refreshes an expired history cursor without replacing open code", async () =
   expect(w.active()).toBe(pinned);
   expect(w.state.historyStale).toBe(false);
 });
+
+it("identifies identical recorded content even when snapshot IDs differ", async () => {
+  const { isRecordedReview } = await import("../src/workspace");
+  const tab = {
+    base: { Snapshot: { id: "a" } },
+    target: { Snapshot: { id: "b" } },
+    data: {
+      base: {
+        files: [{ path, state: "Present", sha256: "one" }],
+        exclusions: [],
+      },
+      target: {
+        files: [{ path, state: "Present", sha256: "one" }],
+        exclusions: [],
+      },
+    },
+  } as any;
+  expect(isRecordedReview(tab)).toBe(true);
+  tab.data.target.files[0].sha256 = "two";
+  expect(isRecordedReview(tab)).toBe(false);
+});
+
+it("clicking the active file preserves explanations and avoids reloading them", async () => {
+  const f = fixture();
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  await w.openFile(path);
+  const explanations = [{ id: "visible" }] as any;
+  w.state.explanations = explanations;
+  const before = f.calls.length;
+  await w.openFile(path);
+  expect(w.state.explanations).toBe(explanations);
+  expect(f.calls.length).toBe(before);
+});

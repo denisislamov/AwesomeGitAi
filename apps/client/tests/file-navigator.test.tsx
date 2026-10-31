@@ -124,3 +124,49 @@ it("does not accept a scope choice before a repository has opened", () => {
     (screen.getByLabelText("File list scope") as HTMLSelectElement).disabled,
   ).toBe(true);
 });
+
+it("keeps All files visible throughout an asynchronous historical-to-live open", async () => {
+  const { w, tab } = fixture();
+  let finish!: () => void;
+  vi.spyOn(w, "openFile").mockImplementation(async (path) => {
+    await new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    w.state.tabs = [
+      { ...tab, id: "live", path, base: "Index", target: "Worktree" },
+    ];
+    w.state.activeTab = "live";
+  });
+  const ui = render(<FileNavigator workspace={w} stagingMode="work" />);
+  fireEvent.change(screen.getByLabelText("File list scope"), {
+    target: { value: "all" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "File Current.cs" }));
+  expect(
+    (screen.getByLabelText("File list scope") as HTMLSelectElement).value,
+  ).toBe("all");
+  expect(screen.getByRole("button", { name: "File Current.cs" })).toBeTruthy();
+  expect(screen.getByRole("status").textContent).toContain(
+    "Opening Current.cs",
+  );
+  finish();
+  await waitFor(() => expect(w.state.activeTab).toBe("live"));
+  ui.rerender(<FileNavigator workspace={w} stagingMode="work" />);
+  expect(
+    (screen.getByLabelText("File list scope") as HTMLSelectElement).value,
+  ).toBe("all");
+});
+it("names identical recorded versions explicitly instead of promising a diff", () => {
+  const { w, tab } = fixture();
+  tab.base = { Snapshot: { id: "before" } };
+  tab.target = { Snapshot: { id: "after" } };
+  tab.data.base.files = [
+    { path: p("Context.cs"), state: "Present", sha256: "same" },
+  ];
+  tab.data.target.files = tab.data.base.files;
+  render(<FileNavigator workspace={w} stagingMode="work" />);
+  expect(screen.getByRole("option", { name: "Recorded files" })).toBeTruthy();
+  expect(
+    screen.getByText("Saved explanation · identical versions, no + / −"),
+  ).toBeTruthy();
+});

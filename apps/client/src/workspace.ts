@@ -56,6 +56,28 @@ export type CodeTab = {
   scroll: number;
   stale: boolean;
 };
+// A recorded review can use two distinct snapshots of identical content.
+export function isRecordedReview(tab: CodeTab): boolean {
+  if (
+    ![tab.base, tab.target].every(
+      (r) => typeof r === "object" && "Snapshot" in r,
+    )
+  )
+    return false;
+  const a = tab.data.base,
+    b = tab.data.target;
+  if (
+    a.exclusions?.length ||
+    b.exclusions?.length ||
+    a.files.length !== b.files.length
+  )
+    return false;
+  const files = new Map(a.files.map((f) => [f.path.raw_base64, f]));
+  return b.files.every((f) => {
+    const old = files.get(f.path.raw_base64);
+    return old && old.state === f.state && old.sha256 === f.sha256;
+  });
+}
 export type RelationsState = {
   key: string;
   snapshotId: string;
@@ -775,13 +797,13 @@ export class Workspace {
     const scope = this.scope();
     const epoch = this.epoch;
     const serial = ++this.opening;
-    this.showRelations(false);
     const id = JSON.stringify([path.raw_base64, base, target]);
     const existing = this.state.tabs.find((t) => t.id === id);
     if (existing && !refresh) {
       this.activate(id);
       return;
     }
+    this.showRelations(false);
     this.patch({ busy: true, error: null });
     try {
       const data = await this.api.desktop({
@@ -828,6 +850,10 @@ export class Workspace {
   }
   activate(id: string) {
     ++this.opening;
+    if (this.state.activeTab === id) {
+      this.patch({ busy: false });
+      return;
+    }
     this.showRelations(false);
     this.patch({
       activeTab: id,

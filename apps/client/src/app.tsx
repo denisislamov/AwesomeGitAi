@@ -8,7 +8,12 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Workspace, revisionLabel, type WorkspaceApi } from "./workspace";
+import {
+  Workspace,
+  revisionLabel,
+  isRecordedReview,
+  type WorkspaceApi,
+} from "./workspace";
 import {
   GitControls,
   GitJobStatus,
@@ -273,11 +278,13 @@ export function App({
           {tab && (
             <details className="revision-details">
               <summary title="Version details">
-                {JSON.stringify(tab.base) === JSON.stringify(tab.target)
-                  ? typeof tab.target === "object" && "Snapshot" in tab.target
-                    ? "Recorded version"
-                    : revisionLabel(tab.target)
-                  : `${revisionLabel(tab.base)} → ${revisionLabel(tab.target)}`}
+                {isRecordedReview(tab)
+                  ? "Recorded code · no changes"
+                  : JSON.stringify(tab.base) === JSON.stringify(tab.target)
+                    ? typeof tab.target === "object" && "Snapshot" in tab.target
+                      ? "Recorded version"
+                      : revisionLabel(tab.target)
+                    : `${revisionLabel(tab.base)} → ${revisionLabel(tab.target)}`}
               </summary>
               <div className="revision-popup">
                 <strong>{tab.path.display}</strong>
