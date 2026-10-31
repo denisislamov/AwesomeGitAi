@@ -259,18 +259,36 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
         <aside className="commit-details" aria-label="Commit details">
           {details ? (
             <>
-              <strong>{details.message}</strong>
-              <p>
-                {details.author}
-                <br />
-                <small>{details.date}</small>
-              </p>
-              <code title={details.oid}>{details.oid.slice(0, 12)}</code>
-              <p>
-                <button onClick={() => setBase(details.oid)}>
+              <section
+                className="commit-description"
+                aria-label="Commit message"
+              >
+                <h3>{details.message.split("\n")[0]}</h3>
+                <div className="commit-metadata">
+                  <span>{details.author}</span>
+                  <time>{details.date.slice(0, 10)}</time>
+                  <code title={details.oid}>{details.oid.slice(0, 8)}</code>
+                </div>
+                {details.message.includes("\n") &&
+                  details.message
+                    .slice(details.message.indexOf("\n"))
+                    .trim() && (
+                    <details className="commit-body">
+                      <summary>Full message</summary>
+                      <p>
+                        {details.message
+                          .slice(details.message.indexOf("\n"))
+                          .trim()}
+                      </p>
+                    </details>
+                  )}
+                <button
+                  className="commit-base-action"
+                  onClick={() => setBase(details.oid)}
+                >
                   Use as comparison base
                 </button>
-              </p>
+              </section>
               {base && (
                 <p>
                   Base: {base.slice(0, 8)}{" "}
@@ -279,20 +297,33 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                   </button>
                 </p>
               )}
-              <h4>CHANGED FILES</h4>
-              {details.paths.map((p) => (
-                <button
-                  key={p.raw_base64}
-                  title={p.display}
-                  onClick={() => open(p)}
-                >
-                  {p.display}
-                </button>
-              ))}
-              {details.paths.length === 0 && (
-                <p>No ordinary diff files; this may be a merge commit.</p>
-              )}
-              <small>Selecting a commit does not switch branches.</small>
+              <section className="commit-files" aria-label="Changed files">
+                <h4>
+                  Changed files <span>{details.paths.length}</span>
+                </h4>
+                {details.paths.map((p) => (
+                  <button
+                    key={p.raw_base64}
+                    title={p.display}
+                    aria-label={p.display}
+                    className="commit-file"
+                    onClick={() => open(p)}
+                  >
+                    <span>{p.display.split("/").at(-1)}</span>
+                    {p.display.includes("/") && (
+                      <small>
+                        {p.display.split("/").slice(0, -1).slice(-2).join("/")}
+                      </small>
+                    )}
+                  </button>
+                ))}
+                {details.paths.length === 0 && (
+                  <p>No ordinary diff files; this may be a merge commit.</p>
+                )}
+              </section>
+              <small className="commit-hint">
+                Selecting a commit does not switch branches.
+              </small>
             </>
           ) : (
             <p>

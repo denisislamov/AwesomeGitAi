@@ -104,3 +104,8 @@ Private sibling bare Git, lossless scoped migration, durable pending SQL recover
 ## EFT follow-up — recorded explanations and Git navigation
 
 Added original-snapshot Open code navigation from local Project Memory decisions, empty-context discovery, source-block reveal, current-branch indicator, folder tree and resizable persisted Git sections. Stale history cursors refresh without replacing code; immutable comparisons no longer depend on the live index. Rust144/probe4/UI96/native8, contracts/typecheck/build pass. All 16 browser functional scenarios passed across full/focused runs; benchmark skipped and transient trace timeout documented. Actual EFT CanStart explanation opened with Exact anchors in rebuilt macOS UI; EFT HEAD/status unchanged. [Results and validation details](../architecture/git-memory-ux-results.md). T8 remains deferred; no push.
+
+
+## Contextual Files and readable supporting panels — native acceptance pending
+
+Files follows opened commit/snapshot comparisons, including historical deletions; Working changes and All files remain explicit. Commit metadata/message/files have separate hierarchy and compact paths. Explanation/Steps/Diagram use a distinct, opaque prose surface with Monaco code/values. Review and scope-selection race fixes covered by regression tests. Rust144/UI103/native8, types/contracts/build pass; all 17 browser scenarios passed across full/focused runs (one timeout rerun documented). Mac locked during final native check; user asked to unlock. [Results](../architecture/contextual-files-results.md). Local commit only; T8 remains deferred.

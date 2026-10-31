@@ -1549,3 +1549,128 @@ code {
     height: auto;
   }
 }
+
+/* Supporting text has a quieter reading surface than the code editor. */
+.file-tree > select {
+  width: calc(100% - 12px);
+  margin: 6px;
+}
+.file-scope-note {
+  display: block;
+  padding: 0 8px 4px;
+  font-size: 0.88em;
+}
+.file-list summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.commit-description {
+  padding-bottom: 10px;
+}
+.commit-description h3 {
+  font:
+    600 1em/1.35 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  margin: 0 0 6px;
+  color: var(--text);
+}
+.commit-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.commit-body {
+  margin: 7px 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.commit-body summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.commit-body p {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+.commit-details .commit-base-action {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.commit-files {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.commit-files h4 {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 5px;
+  font-size: 0.85em;
+}
+.commit-details .commit-file {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 5px 6px;
+  gap: 2px;
+  text-align: left;
+}
+.commit-file > span,
+.commit-file > small {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.commit-file > span {
+  color: var(--text);
+}
+.commit-file > small {
+  font-size: 0.82em;
+  color: var(--muted);
+}
+.commit-hint {
+  display: block;
+  padding-top: 8px;
+  font-size: 0.82em;
+}
+.learning-panel {
+  background: color-mix(in srgb, var(--panel) 94%, #d5c4a1);
+  border-left: 2px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+.learning-panel > .explanation {
+  background: color-mix(in srgb, var(--panel) 94%, #d5c4a1);
+}
+.learning-panel .explanation-body,
+.learning-panel .learning-content {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.4;
+}
+.learning-panel h2,
+.learning-panel h3 {
+  color: var(--text);
+  font-weight: 600;
+}
+.learning-panel .context-card,
+.learning-panel .trace-values,
+.learning-panel code,
+.learning-panel pre {
+  font-family: Monaco, "Cascadia Mono", monospace;
+  font-size: 0.9em;
+}
+.learning-panel .context-card {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--code) 55%, transparent);
+}
+.learning-panel .decision-card {
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+.learning-panel .learning-picker,
+.learning-panel .trace-controls {
+  font-size: 0.9em;
+}

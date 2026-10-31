@@ -28,6 +28,13 @@ test("real host: code, old side, history selection, stale state and keyboard exp
   await page.getByLabel("Explanation placement").selectOption("popover");
   await page.getByRole("button", { name: "Close View options" }).click();
   await expect(page.getByTestId("explanation-target")).toHaveText(target!);
+  await expect
+    .poll(async () =>
+      page
+        .locator(".explanation.popover")
+        .evaluate((el) => getComputedStyle(el).backgroundColor),
+    )
+    .not.toBe("rgba(0, 0, 0, 0)");
   await page.getByRole("button", { name: "Commit Initial wallet" }).click();
   await expect(
     page.getByLabel("Commit details", { exact: true }),
@@ -107,7 +114,7 @@ test("cached 1900-line file switch and scroll restoration", async ({
   await page
     .getByRole("button", { name: "Open repository", exact: true })
     .click();
-  await page.getByRole("button", { name: "All files", exact: true }).click();
+  await page.getByLabel("File list scope").selectOption("all");
   await page
     .getByRole("button", { name: "File Large.cs", exact: true })
     .click();
@@ -476,7 +483,7 @@ for (const language of ["ts", "cs"])
     await page
       .getByRole("button", { name: "Open repository", exact: true })
       .click();
-    await page.getByRole("button", { name: "All files", exact: true }).click();
+    await page.getByLabel("File list scope").selectOption("all");
     await page
       .getByRole("button", { name: `File Relations.${language}`, exact: true })
       .click();
@@ -794,4 +801,69 @@ test("recorded navigation reveals an offscreen code block", async ({
       .filter({ hasText: /^\/\/ line 1499$/ })
       .last(),
   ).toBeInViewport();
+});
+
+test("file list follows open historical code and keeps working changes explicit", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  const info = await (await request.get("/test-info")).json();
+  await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await page.getByLabel("Repository path").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Open repository", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Commit Initial wallet", exact: true })
+    .click();
+  const details = page.getByLabel("Commit details", { exact: true });
+  await expect(
+    details.getByRole("region", { name: "Commit message" }),
+  ).toContainText("Initial wallet");
+  await details.getByRole("button", { name: "Code.cs", exact: true }).click();
+  const files = page.getByLabel("Repository files", { exact: true });
+  await expect(page.getByLabel("File list scope")).toHaveValue("comparison");
+  await files
+    .getByRole("button", { name: "File EarlierDeleted.cs", exact: true })
+    .click();
+  await expect(page.getByLabel("New code version")).toContainText(
+    "class EarlierDeleted",
+    { timeout: 15000 },
+  );
+  await expect(
+    files.getByRole("button", { name: "File Readme.md", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Commit Remove old class", exact: true })
+    .click();
+  await details
+    .getByRole("button", { name: "EarlierDeleted.cs", exact: true })
+    .click();
+  await expect(page.getByText("File deleted", { exact: true })).toBeVisible();
+  await expect(
+    files.getByRole("button", { name: "File EarlierDeleted.cs", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("File list scope").selectOption("working");
+  await expect(
+    files.getByRole("button", { name: "File EarlierDeleted.cs", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.getByText("File deleted", { exact: true })).toBeVisible();
+  await page.getByLabel("File list scope").selectOption("comparison");
+  await expect(
+    files.getByRole("button", { name: "File EarlierDeleted.cs", exact: true }),
+  ).toBeVisible();
+  const prose = await page
+    .locator(".explanation-body")
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+  const code = await page
+    .locator(".cm-content")
+    .first()
+    .evaluate((el) => getComputedStyle(el).fontFamily);
+  expect(prose).not.toBe(code);
+  await page.screenshot({
+    path: "../../.superpowers/contextual-files.png",
+    fullPage: true,
+  });
 });

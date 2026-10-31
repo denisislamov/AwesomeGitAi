@@ -301,13 +301,29 @@ export async function dispatchPanelAction(
         p.path
           ? w.state.paths.find((f) => f.raw_base64 === p.path)
           : w.state.tabs.find((t) => t.path.raw_base64 === p.path)?.path;
-      // Historical-only files are validated against the selected commit's actual file list.
+      const activeTabId = w.state.activeTab;
+      const selectedCommit = w.state.selectedCommit;
+      const activePair =
+        !!tab &&
+        JSON.stringify([p.base, p.target]) ===
+          JSON.stringify([tab.base, tab.target]);
+      if (!path && activePair) {
+        path = tab.data.base.files.find(
+          (f) =>
+            f.path.raw_base64 === p.path &&
+            tab.data.target.files.some(
+              (other) => other.path.raw_base64 === p.path,
+            ),
+        )?.path;
+      }
+      // Historical-only files are validated against the selected or open commit pair.
+
       if (
         !path &&
         object(p.target) &&
         "Commit" in p.target &&
         object(p.target.Commit) &&
-        p.target.Commit.oid === w.state.selectedCommit
+        (p.target.Commit.oid === w.state.selectedCommit || activePair)
       ) {
         const r = await w.api.desktop({
           kind: "CommitDetails",
@@ -318,7 +334,15 @@ export async function dispatchPanelAction(
               ? p.base.Commit.oid
               : null,
         });
-        if (p.scope !== scopeKey(w)) break;
+        if (
+          p.scope !== scopeKey(w) ||
+          w.state.activeTab !== activeTabId ||
+          (activePair &&
+            JSON.stringify([w.active()?.base, w.active()?.target]) !==
+              JSON.stringify([p.base, p.target])) ||
+          (!activePair && w.state.selectedCommit !== selectedCommit)
+        )
+          break;
         if (r.kind === "CommitDetails")
           path = r.paths.find((f) => f.raw_base64 === p.path);
       }

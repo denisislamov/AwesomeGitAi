@@ -241,3 +241,85 @@ it("validates selection bounds against the selected file in a multi-file snapsho
   });
   expect(explain).toHaveBeenCalledTimes(1);
 });
+
+it("opens a recorded-only file from detached Files only within the active pair", async () => {
+  const w = fixture();
+  const path = {
+    display: "Removed.cs",
+    raw_base64: btoa("Removed.cs"),
+    encoding: "unix_bytes",
+  };
+  const base = { Snapshot: { id: "11111111-1111-1111-1111-111111111111" } },
+    target = { Snapshot: { id: "22222222-2222-2222-2222-222222222222" } };
+  w.state.tabs = [
+    {
+      id: "t",
+      path: { ...path, raw_base64: "other" },
+      base,
+      target,
+      data: { base: { files: [{ path }] }, target: { files: [{ path }] } },
+    } as any,
+  ];
+  w.state.activeTab = "t";
+  const open = vi.spyOn(w, "openFile").mockResolvedValue();
+  const payload = {
+    scope: panelSnapshot(w, {}).scope,
+    path: path.raw_base64,
+    base,
+    target,
+  };
+  await dispatchPanelAction(w, {
+    panel: "files",
+    action: "open_revision",
+    payload,
+  });
+  expect(open).toHaveBeenCalledWith(path, base, target, false);
+  open.mockClear();
+  await dispatchPanelAction(w, {
+    panel: "files",
+    action: "open_revision",
+    payload: {
+      ...payload,
+      target: { Snapshot: { id: "33333333-3333-3333-3333-333333333333" } },
+    },
+  });
+  expect(open).not.toHaveBeenCalled();
+});
+
+it("ignores detached historical file lookup after switching the active tab", async () => {
+  const w = fixture();
+  const path = {
+    display: "Deleted.cs",
+    raw_base64: btoa("Deleted.cs"),
+    encoding: "unix_bytes",
+  };
+  const base = { Commit: { oid: "a".repeat(40) } },
+    target = { Commit: { oid: "b".repeat(40) } };
+  w.state.tabs = [
+    {
+      id: "t",
+      path: { ...path, raw_base64: "other" },
+      base,
+      target,
+      data: { base: { files: [] }, target: { files: [] } },
+    } as any,
+  ];
+  w.state.activeTab = "t";
+  let finish: any;
+  w.api.desktop = vi.fn(() => new Promise((r) => (finish = r)));
+  const open = vi.spyOn(w, "openFile").mockResolvedValue();
+  const pending = dispatchPanelAction(w, {
+    panel: "files",
+    action: "open_revision",
+    payload: {
+      scope: panelSnapshot(w, {}).scope,
+      path: path.raw_base64,
+      base,
+      target,
+    },
+  });
+  w.state.activeTab = "another";
+  finish({ kind: "CommitDetails", paths: [path] });
+  await pending;
+  expect(open).not.toHaveBeenCalled();
+});

@@ -1,3 +1,4 @@
+import { FileNavigator } from "./features/files/FileNavigator";
 import { MemoryDialog } from "./features/memory/MemoryDialog";
 import { RelationsDialog } from "./features/relations/RelationsDialog";
 import React, {
@@ -124,8 +125,6 @@ export function App({
     window.addEventListener("agai-command", handler);
     return () => window.removeEventListener("agai-command", handler);
   }, [panel]);
-  const [treeMode, setTreeMode] = useState("changed");
-  const [filter, setFilter] = useState("");
   const [view, setView] = useState<"unified" | "split">("unified");
   const [mode, setMode] = useState("work");
   const [light, setLight] = useState(false);
@@ -236,90 +235,8 @@ export function App({
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [workspace]);
-  const revisions = (): [Revision, Revision] =>
-    mode === "index" ? ["Head", "Index"] : ["Index", "Worktree"];
-  const open = (p: RepoPath) => void workspace.openFile(p, ...revisions());
-  const changed = new Map(
-    s.repo?.status_entries.flatMap(
-      (e) =>
-        [
-          [e.path.raw_base64, e.status],
-          ...(e.original_path ? [[e.original_path.raw_base64, "D"]] : []),
-        ] as [string, string][],
-    ) ?? [],
-  );
-  const paths = s.paths.filter(
-    (p) =>
-      (treeMode === "all" || changed.has(p.raw_base64)) &&
-      p.display.toLowerCase().includes(filter.toLowerCase()),
-  );
-  const groups = new Map<string, RepoPath[]>();
-  for (const p of paths) {
-    const dir = p.display.includes("/")
-      ? p.display.slice(0, p.display.lastIndexOf("/"))
-      : ".";
-    groups.set(dir, [...(groups.get(dir) ?? []), p]);
-  }
   const panels = {
-    files: (
-      <aside className="file-tree" aria-label="Repository files">
-        <div className="segmented">
-          <button
-            aria-pressed={treeMode === "changed"}
-            onClick={() => setTreeMode("changed")}
-          >
-            Changes
-          </button>
-          <button
-            aria-pressed={treeMode === "all"}
-            onClick={() => setTreeMode("all")}
-          >
-            All files
-          </button>
-        </div>
-        <input
-          aria-label="Search files"
-          placeholder="Find a file…"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <div className="file-list">
-          {[...groups].map(([dir, files]) => (
-            <details key={dir} open>
-              <summary title={dir}>{dir === "." ? "Project" : dir}</summary>
-              {files.map((p) => (
-                <button
-                  key={p.raw_base64}
-                  aria-label={`File ${p.display}`}
-                  aria-current={
-                    tab?.path.raw_base64 === p.raw_base64 ? "page" : undefined
-                  }
-                  title={p.display}
-                  onClick={() => open(p)}
-                >
-                  <span className="file-icon">
-                    {p.display.endsWith(".cs")
-                      ? "C#"
-                      : p.display.endsWith(".ts")
-                        ? "TS"
-                        : "◇"}
-                  </span>
-                  <span>{p.display.split("/").at(-1)}</span>
-                  <small>{changed.get(p.raw_base64)?.trim() || ""}</small>
-                </button>
-              ))}
-            </details>
-          ))}
-          {s.repo && paths.length === 0 && (
-            <p className="empty-small">
-              {treeMode === "changed"
-                ? "No changed files. Switch to All files."
-                : "No files found."}
-            </p>
-          )}
-        </div>
-      </aside>
-    ),
+    files: <FileNavigator workspace={workspace} stagingMode={mode} />,
     code: (
       <section className="code-workspace" aria-label="Code">
         <div className="tabs" role="tablist" aria-label="Open versions">
