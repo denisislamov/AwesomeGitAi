@@ -240,7 +240,7 @@ export function CodeReader({
           ".cm-selectionBackground": {
             backgroundColor: light
               ? "#d5c4a1 !important"
-              : "#504945 !important",
+              : "#65556f !important",
           },
         },
         { dark: !light },
