@@ -277,6 +277,129 @@ fn closed_session_allows_exact_retry_but_rejects_new_write() {
     );
 }
 #[test]
+fn closed_session_revisions_preserve_history_source_and_closed_state() {
+    let mut f = Fixture::new();
+    let s = f.session();
+    let c = f.capture(&s);
+    let mut d = f.decision(&s, &c);
+    let original = f
+        .call("decision_record", write(json!({"decision":d})))
+        .unwrap();
+    let close = write(
+        json!({"session_id":s["session_id"],"final_snapshot_id":c["snapshot_id"],"outcome":"completed","summary":"done","unresolved":[]}),
+    );
+    let closed_receipt = f.call("session_close", close.clone()).unwrap();
+    let closed = f
+        .store
+        .doc("agent_session", s["session_id"].as_str().unwrap())
+        .unwrap()
+        .unwrap();
+    d["behavior"] = json!("A concrete example and its result");
+    let revision = write(
+        json!({"old_decision_id":original["decision_id"],"expected_revision":1,"reason":"Explain for Junior","new_decision":d}),
+    );
+    let updated = f.call("decision_supersede", revision.clone()).unwrap();
+    assert_eq!(
+        f.call("decision_supersede", revision.clone()).unwrap(),
+        updated
+    );
+    let old = f
+        .store
+        .doc("decision", original["decision_id"].as_str().unwrap())
+        .unwrap()
+        .unwrap();
+    let new = f
+        .store
+        .doc("decision", updated["decision_id"].as_str().unwrap())
+        .unwrap()
+        .unwrap();
+    assert_eq!(old["behavior"], "new behavior");
+    assert_eq!(old["superseded_by"], new["id"]);
+    assert_eq!(new["supersedes"], old["id"]);
+    assert_eq!(new["supersede_reason"], "Explain for Junior");
+    assert_eq!(new["anchors"], old["anchors"]);
+    assert_eq!(new["snapshot_id"], old["snapshot_id"]);
+    assert_eq!(new["behavior"], d["behavior"]);
+    assert!(new["review"].is_null());
+    let mut stale = revision.clone();
+    stale["idempotency_key"] = json!(Uuid::new_v4());
+    assert_eq!(
+        f.call("decision_supersede", stale).unwrap_err().code,
+        "REVISION_CONFLICT"
+    );
+    d["rationale"] = json!("Further clarification");
+    let next = f.call("decision_supersede", write(json!({"old_decision_id":new["id"],"expected_revision":1,"reason":"Clarify rationale","new_decision":d}))).unwrap();
+    assert_ne!(next["decision_id"], new["id"]);
+    assert_eq!(
+        f.store
+            .docs("decision", f.reader.repo_id, f.reader.worktree_id)
+            .unwrap()
+            .len(),
+        3
+    );
+    assert_eq!(
+        f.store
+            .doc("agent_session", s["session_id"].as_str().unwrap())
+            .unwrap()
+            .unwrap(),
+        closed
+    );
+    assert_eq!(f.call("session_close", close).unwrap(), closed_receipt);
+    assert_eq!(
+        std::fs::read(f.repo.path().join("a.cs")).unwrap(),
+        b"agent changed code\n"
+    );
+    f.grant = Uuid::new_v4();
+    assert_eq!(
+        f.call("decision_supersede", revision).unwrap_err().code,
+        "SCOPE_DENIED"
+    );
+}
+#[test]
+fn closed_revision_cannot_rebind_source_or_reopen_session() {
+    let mut f = Fixture::new();
+    let s = f.session();
+    let c = f.capture(&s);
+    let d = f.decision(&s, &c);
+    let original = f
+        .call("decision_record", write(json!({"decision":d})))
+        .unwrap();
+    let close = json!({"session_id":s["session_id"],"final_snapshot_id":c["snapshot_id"],"outcome":"partial","summary":"done","unresolved":["tests"]});
+    f.call("session_close", write(close.clone())).unwrap();
+    for field in ["snapshot_id", "anchors"] {
+        let mut changed = d.clone();
+        if field == "snapshot_id" {
+            changed[field] = s["baseline_snapshot_id"].clone();
+        } else {
+            changed["anchors"][0]["content_hash"] = json!("0".repeat(64));
+        }
+        let args = write(
+            json!({"old_decision_id":original["decision_id"],"expected_revision":1,"reason":"attempted rebinding","new_decision":changed}),
+        );
+        assert_eq!(
+            f.call("decision_supersede", args).unwrap_err().code,
+            "CLOSED_SESSION_SOURCE_CHANGE"
+        );
+    }
+    assert_eq!(
+        f.call("decision_record", write(json!({"decision":d})))
+            .unwrap_err()
+            .code,
+        "SESSION_CLOSED"
+    );
+    assert_eq!(
+        f.call("session_close", write(close)).unwrap_err().code,
+        "SESSION_CLOSED"
+    );
+    assert_eq!(
+        f.store
+            .docs("decision", f.reader.repo_id, f.reader.worktree_id)
+            .unwrap()
+            .len(),
+        1
+    );
+}
+#[test]
 fn learning_artifacts_are_owned_snapshot_bound_and_idempotent() {
     let mut f = Fixture::new();
     let session = f.session();

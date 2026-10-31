@@ -52,6 +52,7 @@ fn context_contains_full_relevant_sources_but_not_superseded_or_foreign_paths() 
     let result = agent_call(&mut s, &r, g, "context_get", args(&r)).unwrap();
     let content = result["content"].as_str().unwrap();
     assert!(content.contains("reason unique"));
+    assert!(content.contains("\"revision\":1"));
     assert!(content.contains("pending perf"));
     assert!(content.contains("rejected"));
     assert!(content.contains("external reason"));

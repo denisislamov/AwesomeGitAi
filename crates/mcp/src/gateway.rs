@@ -222,7 +222,7 @@ impl ServerHandler for Gateway {
                 "diagram_record"=>"Record a snapshot-bound diagram with typed nodes/edges and reported, inferred or unknown relationships.",
                 "event_append"=>"Append an agent-reported action, question, clarification or observation to the session.",
                 "evidence_record"=>"Record agent-reported check evidence; this never becomes independent runner evidence.",
-                "decision_supersede"=>"Replace a decision only at its expected revision, retaining the old decision and history.",
+                "decision_supersede"=>"Revise an owned decision at its expected revision, retaining history. Allowed after session closure for narrative changes with the same session_id, snapshot_id and anchors; the session stays closed.",
                 _=>"Close a session with final snapshot, outcome, summary and unresolved items."
             }.into());
             tool.input_schema=Arc::new(tool_schema(name).unwrap().as_object().unwrap().clone());tool

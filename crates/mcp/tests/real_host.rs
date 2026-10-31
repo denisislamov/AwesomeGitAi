@@ -95,6 +95,9 @@ async fn workflow(client: &Client, repo: &Path, bytes: &str) {
     let closed=tool(client,"session_close",json!({"session_id":session["session_id"],"final_snapshot_id":captured["snapshot_id"],"outcome":"completed","summary":"SDK scenario complete","unresolved":[]}),true).await;
     assert_eq!(closed["outcome"], "completed");
     assert_eq!(closed["warnings"], json!([]));
+    decision["behavior"] = json!("Clearer explanation of the same captured source after closure");
+    let clarified = tool(client, "decision_supersede", json!({"old_decision_id":newer["decision_id"],"expected_revision":1,"reason":"Post-session editorial improvement","new_decision":decision}), true).await;
+    assert_ne!(clarified["decision_id"], newer["decision_id"]);
     assert_eq!(
         std::fs::read_to_string(repo.join("a.cs")).unwrap(),
         revised_bytes

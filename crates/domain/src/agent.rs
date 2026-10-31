@@ -276,6 +276,7 @@ fn context(store: &mut Store, r: &GitReader, grant: Uuid, args: &Value) -> Resul
         let mut source = serde_json::Map::new();
         for key in [
             "id",
+            "revision",
             "session_id",
             "snapshot_id",
             "baseline_snapshot_id",
@@ -293,6 +294,7 @@ fn context(store: &mut Store, r: &GitReader, grant: Uuid, args: &Value) -> Resul
             "source",
             "status",
             "supersedes",
+            "superseded_by",
             "supersede_reason",
             "evidence_ids",
             "event_ids",
@@ -359,7 +361,7 @@ pub fn agent_call(
     validate(tool, &args)?;
     if tool == "integration_guide" {
         return Ok(
-            json!({"schema_version":1,"explanation_policy":include_str!("../../../docs/integrations/explanation-quality.md"),"repo_id":r.repo_id,"worktree_id":r.worktree_id,"tools":TOOLS,"workflow":["context_get(paths,budget_chars) pins pre-edit working-tree baseline and returns generation","session_open(expected_generation from context) before edits; retain session_id","edit selected paths, then context_get to obtain current generation","snapshot_capture using exactly session baseline paths; returns snapshot_id and comparison","decision_record with exact anchors/hash and alternatives; evidence_record states agent_reported checks","decision_supersede with expected_revision preserves prior explanation","trace_record(session_id,trace) and diagram_record(session_id,diagram) attach validated educational models to a captured session snapshot; use schema-defined source locations and explicit assumptions","session_close with final_snapshot_id and unresolved items"],"scope":"Only this repository/worktree and sessions owned by this grant. Project decisions in context are not automatically current.","provenance":"All writes are agent_reported. Human acceptance and runner-observed evidence are unavailable.","retry":"Reuse idempotency_key and identical semantic input after unknown acknowledgement; request_id may change. A new operation needs a new key.","anchor_hash":"SHA256 of exact UTF-8 bytes for inclusive lines, preserving LF/CRLF and final newline. Old anchors use comparison.base_snapshot_id, new anchors use target_snapshot_id.","example":{"tool":"context_get","arguments":{"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"task":"explain changes","paths":["src/example.cs"],"budget_chars":8000}},"limitations":["No Git mutations","No human acceptance","Trace/diagram data is agent-reported educational material, never observed execution","Context capture writes immutable snapshots; excluded files cannot become decision anchors"]}),
+            json!({"schema_version":1,"explanation_policy":include_str!("../../../docs/integrations/explanation-quality.md"),"repo_id":r.repo_id,"worktree_id":r.worktree_id,"tools":TOOLS,"workflow":["context_get(paths,budget_chars) pins pre-edit working-tree baseline and returns generation","session_open(expected_generation from context) before edits; retain session_id","edit selected paths, then context_get to obtain current generation","snapshot_capture using exactly session baseline paths; returns snapshot_id and comparison","decision_record with exact anchors/hash and alternatives; evidence_record states agent_reported checks","decision_supersede with expected_revision preserves prior explanation; closed sessions allow same-grant text revisions with unchanged session_id, snapshot_id and anchors","trace_record(session_id,trace) and diagram_record(session_id,diagram) attach validated educational models to a captured session snapshot; use schema-defined source locations and explicit assumptions","session_close with final_snapshot_id and unresolved items"],"scope":"Only this repository/worktree and sessions owned by this grant. Project decisions in context are not automatically current.","provenance":"All writes are agent_reported. Human acceptance and runner-observed evidence are unavailable.","retry":"Reuse idempotency_key and identical semantic input after unknown acknowledgement; request_id may change. A new operation needs a new key.","anchor_hash":"SHA256 of exact UTF-8 bytes for inclusive lines, preserving LF/CRLF and final newline. Old anchors use comparison.base_snapshot_id, new anchors use target_snapshot_id.","example":{"tool":"context_get","arguments":{"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"task":"explain changes","paths":["src/example.cs"],"budget_chars":8000}},"limitations":["No Git mutations","No human acceptance","Trace/diagram data is agent-reported educational material, never observed execution","Context capture writes immutable snapshots; excluded files cannot become decision anchors"]}),
         );
     }
     if tool == "context_get" {
@@ -407,7 +409,17 @@ pub fn agent_call(
     }
     if let Some(session) = &session {
         if session["status"] != "open" {
-            return Err(err("SESSION_CLOSED"));
+            if tool != "decision_supersede" || session["status"] != "closed" {
+                return Err(err("SESSION_CLOSED"));
+            }
+            // A closed session permits editorial revisions, not a new source history.
+            let previous = old.as_ref().ok_or_else(|| err("SCOPE_DENIED"))?;
+            let replacement = &args["new_decision"];
+            if replacement["snapshot_id"] != previous["snapshot_id"]
+                || replacement["anchors"] != previous["anchors"]
+            {
+                return Err(err("CLOSED_SESSION_SOURCE_CHANGE"));
+            }
         }
     }
     let id = Uuid::new_v4();
