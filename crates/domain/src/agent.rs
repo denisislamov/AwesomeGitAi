@@ -174,14 +174,14 @@ fn validate_decision(
 fn context(store: &mut Store, r: &GitReader, grant: Uuid, args: &Value) -> Result<Value> {
     scope(args, r)?;
     let selected = paths(&args["paths"])?;
-    let snapshot = if let Some(id) = args.get("snapshot_id") {
-        let _ = owned(store, "agent_snapshot", id.as_str().unwrap(), r, grant)?;
-        let snapshot = store.snapshot(uid(id)?)?;
+    let historical = args.get("snapshot_id").is_some();
+    let mut snapshot = if let Some(id) = args.get("snapshot_id") {
         let doc = owned(store, "agent_snapshot", id.as_str().unwrap(), r, grant)?;
-        if paths(&doc["paths"])? != selected {
-            return Err(err("SCOPE_DENIED"));
+        let available = paths(&doc["paths"])?;
+        if selected.iter().any(|path| !available.contains(path)) {
+            return Err(err("SNAPSHOT_PATH_OUT_OF_SCOPE"));
         }
-        snapshot
+        store.snapshot(uid(id)?)?
     } else {
         if args.get("cursor").is_some() {
             return Err(err("INVALID_CURSOR"));
@@ -205,26 +205,33 @@ fn context(store: &mut Store, r: &GitReader, grant: Uuid, args: &Value) -> Resul
         )?;
         snapshot
     };
-    let previous = store.doc("agent_context", &grant.to_string())?;
-    let rev = previous
-        .as_ref()
-        .and_then(|v| v["revision"].as_u64())
-        .unwrap_or(0);
-    let mut ctx = new_doc(
-        r,
-        grant,
-        grant,
-        json!({"paths":args["paths"],"snapshot_id":snapshot.id,"generation":snapshot.generation}),
-    );
-    ctx["revision"] = json!(rev + 1);
-    store.put_doc(
-        "agent_context",
-        &grant.to_string(),
-        r.repo_id,
-        r.worktree_id,
-        rev,
-        &ctx,
-    )?;
+    // Historical browsing must not replace the live baseline used by session_open.
+    if !historical {
+        let previous = store.doc("agent_context", &grant.to_string())?;
+        let rev = previous
+            .as_ref()
+            .and_then(|v| v["revision"].as_u64())
+            .unwrap_or(0);
+        let mut ctx = new_doc(
+            r,
+            grant,
+            grant,
+            json!({"paths":args["paths"],"snapshot_id":snapshot.id,"generation":snapshot.generation}),
+        );
+        ctx["revision"] = json!(rev + 1);
+        store.put_doc(
+            "agent_context",
+            &grant.to_string(),
+            r.repo_id,
+            r.worktree_id,
+            rev,
+            &ctx,
+        )?;
+    }
+    snapshot.files.retain(|file| selected.contains(&file.path));
+    snapshot
+        .exclusions
+        .retain(|excluded| selected.contains(&excluded.path));
     let mut full = String::new();
     for file in &snapshot.files {
         full.push_str(&format!(
@@ -347,7 +354,7 @@ fn context(store: &mut Store, r: &GitReader, grant: Uuid, args: &Value) -> Resul
         .saturating_add(args["budget_chars"].as_u64().unwrap() as usize)
         .min(chars.len());
     Ok(
-        json!({"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"snapshot_id":snapshot.id,"generation":snapshot.generation,"paths":args["paths"],"content":chars[offset..end].iter().collect::<String>(),"truncated":end<chars.len(),"cursor":if end<chars.len(){Some(format!("{}:{digest}:{end}",snapshot.id))}else{None},"exclusions":snapshot.exclusions,"memory_omitted_count":memory_omitted,"memory_truncated":memory_omitted>0}),
+        json!({"schema_version":1,"repo_id":r.repo_id,"worktree_id":r.worktree_id,"snapshot_id":snapshot.id,"generation":snapshot.generation,"session_baseline":!historical,"paths":args["paths"],"content":chars[offset..end].iter().collect::<String>(),"truncated":end<chars.len(),"cursor":if end<chars.len(){Some(format!("{}:{digest}:{end}",snapshot.id))}else{None},"exclusions":snapshot.exclusions,"memory_omitted_count":memory_omitted,"memory_truncated":memory_omitted>0}),
     )
 }
 /// Agent grant authentication happens in the host. All supplied IDs are checked again here.

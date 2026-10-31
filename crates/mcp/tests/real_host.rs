@@ -40,12 +40,12 @@ async fn workflow(client: &Client, repo: &Path, bytes: &str) {
             .unwrap()
             .contains("Junior / Middle / Senior")
     );
-    let context = json!({"repo_id":guide["repo_id"],"worktree_id":guide["worktree_id"],"task":"SDK exact source scenario","paths":["a.cs"],"budget_chars":2000});
+    let context = json!({"repo_id":guide["repo_id"],"worktree_id":guide["worktree_id"],"task":"SDK exact source scenario","paths":["a.cs","b.cs"],"budget_chars":2000});
     let before = tool(client, "context_get", context.clone(), false).await;
     let session=tool(client,"session_open",json!({"repo_id":guide["repo_id"],"worktree_id":guide["worktree_id"],"task":"SDK exact source scenario","actor":"rmcp SDK harness","expected_generation":before["generation"]}),true).await;
     std::fs::write(repo.join("a.cs"), bytes).unwrap();
     let current = tool(client, "context_get", context.clone(), false).await;
-    let captured=tool(client,"snapshot_capture",json!({"session_id":session["session_id"],"paths":["a.cs"],"expected_generation":current["generation"]}),true).await;
+    let captured=tool(client,"snapshot_capture",json!({"session_id":session["session_id"],"paths":["a.cs","b.cs"],"expected_generation":current["generation"]}),true).await;
     // Ask the system sha256 implementation to independently compute the anchor hash.
     let output = std::process::Command::new("shasum")
         .args(["-a", "256"])
@@ -72,7 +72,7 @@ async fn workflow(client: &Client, repo: &Path, bytes: &str) {
     let revised_bytes = format!("revised {bytes}");
     std::fs::write(repo.join("a.cs"), &revised_bytes).unwrap();
     let current = tool(client, "context_get", context, false).await;
-    let captured=tool(client,"snapshot_capture",json!({"session_id":session["session_id"],"paths":["a.cs"],"expected_generation":current["generation"]}),true).await;
+    let captured=tool(client,"snapshot_capture",json!({"session_id":session["session_id"],"paths":["a.cs","b.cs"],"expected_generation":current["generation"]}),true).await;
     let output = std::process::Command::new("shasum")
         .args(["-a", "256"])
         .arg(repo.join("a.cs"))
@@ -98,6 +98,20 @@ async fn workflow(client: &Client, repo: &Path, bytes: &str) {
     decision["behavior"] = json!("Clearer explanation of the same captured source after closure");
     let clarified = tool(client, "decision_supersede", json!({"old_decision_id":newer["decision_id"],"expected_revision":1,"reason":"Post-session editorial improvement","new_decision":decision}), true).await;
     assert_ne!(clarified["decision_id"], newer["decision_id"]);
+    let pinned = tool(client, "context_get", json!({"repo_id":guide["repo_id"],"worktree_id":guide["worktree_id"],"snapshot_id":captured["snapshot_id"],"task":"read clarification","paths":["a.cs"],"budget_chars":20000}), false).await;
+    assert_eq!(pinned["session_baseline"], false);
+    assert!(
+        pinned["content"]
+            .as_str()
+            .unwrap()
+            .contains(clarified["decision_id"].as_str().unwrap())
+    );
+    assert!(
+        !pinned["content"]
+            .as_str()
+            .unwrap()
+            .contains("unrelated sibling source")
+    );
     assert_eq!(
         std::fs::read_to_string(repo.join("a.cs")).unwrap(),
         revised_bytes
@@ -140,6 +154,7 @@ async fn sdk_both_transports_persist_real_decision_workflows() {
             .success()
     );
     std::fs::write(repo.path().join("a.cs"), "baseline human change\n").unwrap();
+    std::fs::write(repo.path().join("b.cs"), "unrelated sibling source\n").unwrap();
     let host_bin = std::env::var_os("AGAI_HOST_BIN")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {

@@ -214,7 +214,7 @@ impl ServerHandler for Gateway {
             tool.name = name.into();
             tool.description=Some(match name {
                 "integration_guide"=>"Read scoped v1 workflow, explanation_policy, examples, identity and next steps before writing.",
-                "context_get"=>"Read bounded context for the granted repo/worktree, optionally a pinned snapshot and cursor.",
+                "context_get"=>"Read bounded context for the granted repo/worktree. A pinned snapshot permits any subset of its captured paths and does not replace the live session baseline. Follow cursor when truncated.",
                 "session_open"=>"Open an agent explanation session against the expected repository generation; retain returned IDs and next_actions.",
                 "snapshot_capture"=>"Capture exact source content for this session and expected generation; use returned snapshot and comparison anchors.",
                 "decision_record"=>"Record agent-reported rationale, concrete behavior, alternatives and exact snapshot anchors. Follow integration_guide explanation_policy and the user-chosen Junior / Middle / Senior level; cannot create human acceptance.",

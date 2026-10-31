@@ -28,6 +28,49 @@ fn put(s: &mut Store, r: &GitReader, id: &str, mut data: Value) {
         .unwrap();
 }
 #[test]
+fn pinned_context_accepts_a_subset_without_replacing_the_live_session_baseline() {
+    let (dir, mut s, r, g) = fixture();
+    std::fs::write(dir.path().join("b.cs"), "unrelated source\n").unwrap();
+    let mut wide = args(&r);
+    wide["paths"] = json!(["a.cs", "b.cs"]);
+    let captured = agent_call(&mut s, &r, g, "context_get", wide).unwrap();
+    std::fs::write(dir.path().join("a.cs"), "new live source\n").unwrap();
+    agent_call(&mut s, &r, g, "context_get", args(&r)).unwrap();
+    let baseline = s.doc("agent_context", &g.to_string()).unwrap();
+    let mut pinned = args(&r);
+    pinned["snapshot_id"] = captured["snapshot_id"].clone();
+    let result = agent_call(&mut s, &r, g, "context_get", pinned.clone()).unwrap();
+    assert!(result["content"].as_str().unwrap().contains("code\n"));
+    assert!(
+        !result["content"]
+            .as_str()
+            .unwrap()
+            .contains("unrelated source")
+    );
+    assert!(
+        !result["content"]
+            .as_str()
+            .unwrap()
+            .contains("new live source")
+    );
+    assert_eq!(result["session_baseline"], false);
+    assert_eq!(s.doc("agent_context", &g.to_string()).unwrap(), baseline);
+    pinned["paths"] = json!(["a.cs", "outside.cs"]);
+    assert_eq!(
+        agent_call(&mut s, &r, g, "context_get", pinned.clone())
+            .unwrap_err()
+            .code,
+        "SNAPSHOT_PATH_OUT_OF_SCOPE"
+    );
+    assert_eq!(
+        agent_call(&mut s, &r, Uuid::new_v4(), "context_get", pinned)
+            .unwrap_err()
+            .code,
+        "SCOPE_DENIED"
+    );
+    assert_eq!(s.doc("agent_context", &g.to_string()).unwrap(), baseline);
+}
+#[test]
 fn context_contains_full_relevant_sources_but_not_superseded_or_foreign_paths() {
     let (_dir, mut s, r, g) = fixture();
     put(
