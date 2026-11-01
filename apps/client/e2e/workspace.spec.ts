@@ -945,3 +945,87 @@ test("font shortcuts resize text without page zoom and persist across reload", a
   await expect.poll(size).toBe("15px");
   await expect(page.locator(".dock-divider").first()).toBeVisible();
 });
+
+test("session reload restores project, ordered tabs, active version, selected commit and layout", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  const info = await (await request.get("/test-info")).json();
+  await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await page.getByLabel("Repository path").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Open repository", exact: true })
+    .click();
+  await page.getByRole("button", { name: "File Code.cs", exact: true }).click();
+  await expect(page.getByLabel("New code version")).toContainText("Wallet");
+  await page
+    .getByRole("button", { name: "Commit Initial wallet", exact: true })
+    .click();
+  await page
+    .getByLabel("Repository files", { exact: true })
+    .getByRole("button", { name: "File EarlierDeleted.cs", exact: true })
+    .click();
+  await expect(page.getByLabel("New code version")).toContainText(
+    "class EarlierDeleted",
+  );
+  const tabs = await page.getByRole("tab").allTextContents();
+  await page
+    .getByRole("button", { name: "Commit Remove old class", exact: true })
+    .click();
+  const divider = page.getByRole("separator", { name: "Panel size" }).first();
+  await divider.focus();
+  await page.keyboard.press("ArrowDown");
+  const ratio = await divider.getAttribute("aria-valuenow");
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem("agai-workspace-session-v1") ?? "{}")
+            .tabs?.length,
+      ),
+    )
+    .toBe(2);
+  await page.reload();
+  await expect(page.getByLabel("New code version")).toContainText(
+    "class EarlierDeleted",
+    { timeout: 20000 },
+  );
+  await expect(page.getByRole("tab")).toHaveCount(2);
+  expect(await page.getByRole("tab").allTextContents()).toEqual(tabs);
+  await expect(
+    page.getByRole("button", { name: "Commit Remove old class", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByLabel("File list scope")).toHaveValue("comparison");
+  await expect(
+    page.getByRole("separator", { name: "Panel size" }).first(),
+  ).toHaveAttribute("aria-valuenow", ratio!);
+  await page.getByRole("tab", { name: /Code.cs Worktree/ }).click();
+  await expect(page.getByLabel("New code version")).toContainText("Wallet");
+});
+
+test("unavailable saved project keeps recovery data and repository chooser usable", async ({
+  page,
+}) => {
+  const raw = JSON.stringify({
+    version: 1,
+    root: "/missing-agai-session-test",
+    tabs: [],
+  });
+  await page.addInitScript(
+    (value) => localStorage.setItem("agai-workspace-session-v1", value),
+    raw,
+  );
+  await page.goto("/e2e/");
+  await expect(
+    page.getByText("Some items could not be restored", { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem("agai-workspace-session-v1"),
+    ),
+  ).toBe(raw);
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await expect(page.getByLabel("Repository path")).toBeVisible();
+});

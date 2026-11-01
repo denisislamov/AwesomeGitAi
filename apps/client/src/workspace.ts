@@ -131,6 +131,7 @@ type State = {
   cursor: string | null;
   branchFilter: string;
   selectedCommit: string | null;
+  selectedCommitBase: string | null;
   filesCommit: { oid: string; base: string | null } | null;
   tabs: CodeTab[];
   activeTab: string | null;
@@ -155,6 +156,13 @@ export const revisionLabel = (r: Revision): string =>
       ? r.Commit.oid.slice(0, 8)
       : `Snapshot ${r.Snapshot.id.slice(0, 8)}`;
 export class Workspace {
+  navigationVersion = 0;
+  cancelPendingNavigation() {
+    ++this.navigationVersion;
+    ++this.epoch;
+    ++this.opening;
+    this.patch({ busy: false, openingRepository: false });
+  }
   state: State = {
     relations: null,
     relationBack: null,
@@ -182,6 +190,7 @@ export class Workspace {
     cursor: null,
     branchFilter: "all",
     selectedCommit: null,
+    selectedCommitBase: null,
     filesCommit: null,
     tabs: [],
     activeTab: null,
@@ -227,6 +236,7 @@ export class Workspace {
     });
   }
   clearStoredContext() {
+    ++this.navigationVersion;
     ++this.epoch;
     ++this.opening;
     ++this.learningRequest;
@@ -255,6 +265,7 @@ export class Workspace {
     });
   }
   async openRepository(path: string) {
+    ++this.navigationVersion;
     let epoch = ++this.epoch;
     ++this.opening;
     this.patch({
@@ -294,6 +305,7 @@ export class Workspace {
         commits: [],
         cursor: null,
         selectedCommit: null,
+        selectedCommitBase: null,
         branchFilter: "all",
         historyStale: false,
         historyBusy: false,
@@ -715,6 +727,7 @@ export class Workspace {
       });
   }
   backFromRelations() {
+    ++this.navigationVersion;
     const back = this.state.relationBack;
     if (!back || this.state.openingRepository) return;
     ++this.opening;
@@ -804,8 +817,10 @@ export class Workspace {
     base: Revision = "Index",
     target: Revision = "Worktree",
     refresh = false,
+    initialScroll = 0,
   ) {
     if (this.state.openingRepository || !this.state.repo) return;
+    ++this.navigationVersion;
     const scope = this.scope();
     const epoch = this.epoch;
     const serial = ++this.opening;
@@ -840,7 +855,7 @@ export class Workspace {
         base,
         target,
         data,
-        scroll: existing?.scroll ?? 0,
+        scroll: existing?.scroll ?? initialScroll,
         stale: false,
       };
       const tabs = this.state.tabs.filter((t) => t.id !== id);
@@ -862,6 +877,7 @@ export class Workspace {
     }
   }
   activate(id: string) {
+    ++this.navigationVersion;
     ++this.opening;
     if (this.state.activeTab === id) {
       this.patch({ busy: false, filesCommit: null });
@@ -880,9 +896,12 @@ export class Workspace {
     void this.refreshExplanations();
   }
   close(id: string) {
+    ++this.navigationVersion;
+    ++this.opening;
     this.showRelations(false);
     const tabs = this.state.tabs.filter((t) => t.id !== id);
     this.patch({
+      busy: false,
       tabs,
       filesCommit: this.state.activeTab === id ? null : this.state.filesCommit,
       explanations: [],
@@ -900,15 +919,18 @@ export class Workspace {
     if (tab) tab.scroll = scroll;
   }
   selectCommit(oid: string, base: string | null = null) {
+    ++this.navigationVersion;
     // A later commit selection wins over an in-flight file open.
     ++this.opening;
     this.patch({
       selectedCommit: oid,
+      selectedCommitBase: base,
       filesCommit: { oid, base },
       busy: false,
     });
   }
   filterBranch(name: string) {
+    ++this.navigationVersion;
     this.patch({ branchFilter: name });
   }
   visibleCommits() {

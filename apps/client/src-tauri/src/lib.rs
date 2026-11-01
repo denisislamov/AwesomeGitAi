@@ -81,6 +81,9 @@ pub fn run() {
             menus::install(app.handle())?;
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
+            if let Some(main) = app.get_webview_window("main") {
+                windows::restore_and_track_geometry(&main, data.join("main-geometry-v1.json"));
+            }
             let packaged = app.path().resource_dir()?.join("bin/agai-host");
             let binary = if packaged.exists() {
                 packaged

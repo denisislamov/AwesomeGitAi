@@ -85,7 +85,7 @@ impl PanelBridge {
             return false;
         }
         base.is_none_or(|base| {
-            workspace["commits"]
+            workspace["selectedCommitBase"].as_str() == Some(base) || workspace["commits"]
                 .as_array()
                 .is_some_and(|commits| commits.iter().any(|c| c["oid"].as_str() == Some(base)))
         })
@@ -169,9 +169,8 @@ pub async fn open_panel(
         .app_data_dir()
         .ok()
         .map(|p| p.join(format!("{name}-geometry-v1.json")));
-    restore_geometry(&opened, geometry_path.as_deref());
     if let Some(path) = geometry_path {
-        remember_geometry(&opened, path);
+        restore_and_track_geometry(&opened, path);
     }
     Ok(())
 }
@@ -290,6 +289,18 @@ mod tests {
         assert!(!bridge.allows_commit_details("panel-git", &scope, "selected", None));
     }
     #[test]
+    fn detached_git_accepts_only_published_restored_base_outside_history_page() {
+        let bridge = PanelBridge::default();
+        let scope: agai_protocol::RepoScope = serde_json::from_value(serde_json::json!({"repo_id":"00000000-0000-4000-8000-000000000001","worktree_id":"00000000-0000-4000-8000-000000000002"})).unwrap();
+        bridge.0.lock().unwrap().state = Some(serde_json::json!({"workspace":{
+            "repo":scope,"openingRepository":false,"selectedCommit":"selected",
+            "selectedCommitBase":"outside-page","commits":[{"oid":"selected"}]
+        }}));
+        assert!(bridge.allows_commit_details("panel-git", &scope, "selected", Some("outside-page")));
+        assert!(!bridge.allows_commit_details("panel-git", &scope, "selected", Some("arbitrary")));
+        assert!(!bridge.allows_commit_details("panel-git", &scope, "other", Some("outside-page")));
+    }
+    #[test]
     fn detached_files_reads_only_the_published_file_comparison() {
         let bridge = PanelBridge::default();
         let scope: agai_protocol::RepoScope = serde_json::from_value(serde_json::json!({"repo_id":"00000000-0000-4000-8000-000000000001","worktree_id":"00000000-0000-4000-8000-000000000002"})).unwrap();
@@ -315,6 +326,9 @@ mod tests {
             y: 100,
             width: 800,
             height: 600,
+            maximized: false,
+            fullscreen: false,
+            scale_factor: 1.0,
         };
         assert!(g.visible_in(-1920, 0, 1920, 1080));
         assert!(!g.visible_in(0, 0, 1920, 1080));
@@ -323,10 +337,29 @@ mod tests {
                 x: 0,
                 y: 0,
                 width: 0,
-                height: 600
+                height: 600,
+                ..g
             }
             .visible_in(0, 0, 1920, 1080)
         );
+    }
+    #[test]
+    fn legacy_geometry_defaults_to_normal_window_and_round_trips_modes() {
+        let mut g: Geometry = serde_json::from_str(r#"{"x":20,"y":40,"width":900,"height":700}"#).unwrap();
+        assert!(!g.maximized && !g.fullscreen);
+        g.fullscreen = true;
+        let saved = serde_json::to_vec(&g).unwrap();
+        let restored: Geometry = serde_json::from_slice(&saved).unwrap();
+        assert!(restored.fullscreen);
+        assert_eq!((restored.x, restored.y, restored.width, restored.height), (20,40,900,700));
+    }
+    #[test]
+    fn retina_bounds_restore_the_same_logical_size_on_another_monitor() {
+        let g: Geometry = serde_json::from_str(r#"{"x":20,"y":40,"width":2880,"height":1920,"scale_factor":2}"#).unwrap();
+        let size = g.logical_size();
+        assert_eq!((size.width, size.height), (1440.0, 960.0));
+        let legacy: Geometry = serde_json::from_str(r#"{"x":20,"y":40,"width":900,"height":700}"#).unwrap();
+        assert_eq!(legacy.logical_size().width, 900.0);
     }
     #[test]
     fn panel_names_cannot_supply_urls_or_arbitrary_labels() {
@@ -354,8 +387,19 @@ struct Geometry {
     y: i32,
     width: u32,
     height: u32,
+    #[serde(default = "default_scale")]
+    scale_factor: f64,
+    #[serde(default)]
+    maximized: bool,
+    #[serde(default)]
+    fullscreen: bool,
 }
+fn default_scale() -> f64 { 1.0 }
 impl Geometry {
+    fn logical_size(&self) -> tauri::LogicalSize<f64> {
+        let scale = if self.scale_factor.is_finite() && (0.5..=8.0).contains(&self.scale_factor) { self.scale_factor } else { 1.0 };
+        tauri::LogicalSize::new(f64::from(self.width) / scale, f64::from(self.height) / scale)
+    }
     fn visible_in(&self, x: i32, y: i32, width: u32, height: u32) -> bool {
         if self.width < 360 || self.height < 300 || self.width > 16000 || self.height > 16000 {
             return false;
@@ -372,62 +416,56 @@ impl Geometry {
             && i64::from(self.y) < i64::from(y) + i64::from(height) - 50
     }
 }
-fn restore_geometry(window: &WebviewWindow, path: Option<&std::path::Path>) {
-    let saved = path
-        .and_then(|p| std::fs::read(p).ok())
+// Save normal bounds separately from display modes, so leaving fullscreen is
+// useful after restoration. Old geometry files intentionally remain readable.
+pub fn restore_and_track_geometry(window: &WebviewWindow, path: std::path::PathBuf) {
+    let Ok(position) = window.outer_position() else { return };
+    let Ok(size) = window.inner_size() else { return };
+    let mut initial = Geometry {
+        x: position.x, y: position.y, width: size.width, height: size.height,
+        maximized: false, fullscreen: false, scale_factor: window.scale_factor().unwrap_or(1.0),
+    };
+    let saved = std::fs::read(&path).ok()
         .filter(|b| b.len() < 4096)
         .and_then(|b| serde_json::from_slice::<Geometry>(&b).ok());
     if let Some(g) = saved {
-        if window
-            .available_monitors()
-            .unwrap_or_default()
-            .iter()
-            .any(|m| {
-                g.visible_in(
-                    m.position().x,
-                    m.position().y,
-                    m.size().width,
-                    m.size().height,
-                )
-            })
-        {
+        if window.available_monitors().unwrap_or_default().iter().any(|m| {
+            g.visible_in(m.position().x, m.position().y, m.size().width, m.size().height)
+        }) {
+            initial = g;
             let _ = window.set_position(tauri::PhysicalPosition::new(g.x, g.y));
-            let _ = window.set_size(tauri::PhysicalSize::new(g.width, g.height));
+            let _ = window.set_size(g.logical_size());
+            if g.maximized { let _ = window.maximize(); }
+            if g.fullscreen { let _ = window.set_fullscreen(true); }
         }
     }
-}
-fn remember_geometry(window: &WebviewWindow, path: std::path::PathBuf) {
-    let Ok(position) = window.outer_position() else {
-        return;
-    };
-    let Ok(size) = window.inner_size() else {
-        return;
-    };
-    let geometry = Mutex::new(Geometry {
-        x: position.x,
-        y: position.y,
-        width: size.width,
-        height: size.height,
-    });
+    let geometry = Mutex::new(initial);
+    let tracked = window.clone();
     window.on_window_event(move |event| {
+        if !matches!(event, tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_)
+            | tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Focused(_)
+            | tauri::WindowEvent::ScaleFactorChanged { .. }) { return; }
         let Ok(mut g) = geometry.lock() else { return };
-        match event {
-            tauri::WindowEvent::Moved(p) => {
-                g.x = p.x;
-                g.y = p.y;
-            }
-            tauri::WindowEvent::Resized(s) => {
+        let maximized = tracked.is_maximized().unwrap_or(g.maximized);
+        let fullscreen = tracked.is_fullscreen().unwrap_or(g.fullscreen);
+        g.maximized = maximized;
+        g.fullscreen = fullscreen;
+        if !maximized && !fullscreen {
+            // Query current bounds together: scale/monitor transitions may not
+            // emit both Moved and Resized before the first focus or Quit.
+            if let (Ok(p), Ok(s), Ok(scale)) =
+                (tracked.outer_position(), tracked.inner_size(), tracked.scale_factor()) {
                 if s.width >= 360 && s.height >= 300 {
-                    g.width = s.width;
-                    g.height = s.height;
+                    g.x = p.x; g.y = p.y; g.width = s.width; g.height = s.height;
+                    g.scale_factor = scale;
                 }
             }
-            tauri::WindowEvent::CloseRequested { .. } | tauri::WindowEvent::Destroyed => {
-                if let Ok(bytes) = serde_json::to_vec(&*g) {
-                    let _ = std::fs::write(&path, bytes);
-                }
-            }
-            _ => {}
+        }
+        // Persist as the user arranges windows, not just on CloseRequested:
+        // macOS Quit may destroy all WebViews without that event.
+        if let Ok(bytes) = serde_json::to_vec(&*g) {
+            let temp = path.with_extension("tmp");
+            if std::fs::write(&temp, bytes).is_ok() { let _ = std::fs::rename(temp, &path); }
         }
     });
 }

@@ -143,7 +143,15 @@ export function restoreLayout(raw: string | null): Layout {
       new Set(s.hidden).size !== s.hidden.length
     )
       return initialLayout();
-    return { version: 1, tree: s.tree, hidden: s.hidden, detached: [] };
+    const detached = s.detached ?? [];
+    if (
+      !Array.isArray(detached) ||
+      !detached.every((p: any) => panelIds.includes(p)) ||
+      new Set(detached).size !== detached.length ||
+      detached.some((p: any) => s.hidden.includes(p))
+    )
+      return initialLayout();
+    return { version: 1, tree: s.tree, hidden: s.hidden, detached };
   } catch {
     return initialLayout();
   }

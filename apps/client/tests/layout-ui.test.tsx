@@ -15,6 +15,7 @@ const native = vi.hoisted(() => ({
   nativePanelsAvailable: () => false,
 }));
 vi.mock("../src/features/layout/native", () => native);
+import { initialLayout } from "../src/features/layout/model";
 import { DockLayout } from "../src/features/layout/DockLayout";
 const panels = {
   files: <div>file content</div>,
@@ -88,4 +89,44 @@ describe("Dock UI", () => {
       timeout: 1600,
     });
   });
+});
+
+it("reopens saved native panels once under StrictMode before reconciling closed windows", async () => {
+  localStorage.setItem(
+    "agai-layout-v1",
+    JSON.stringify({ ...initialLayout(), detached: ["files"] }),
+  );
+  let finish!: () => void;
+  native.openPanel.mockReturnValue(
+    new Promise<void>((r) => {
+      finish = r;
+    }),
+  );
+  native.listPanels.mockResolvedValue(["files"]);
+  render(
+    <React.StrictMode>
+      <DockLayout panels={panels} native />
+    </React.StrictMode>,
+  );
+  await waitFor(() => expect(native.openPanel).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText("file content")).toBeNull();
+  finish();
+  await waitFor(() => expect(native.listPanels).toHaveBeenCalled(), {
+    timeout: 1600,
+  });
+  expect(screen.queryByText("file content")).toBeNull();
+});
+it("redocks saved panels when window restoration fails", async () => {
+  localStorage.setItem(
+    "agai-layout-v1",
+    JSON.stringify({ ...initialLayout(), detached: ["files"] }),
+  );
+  native.openPanel.mockRejectedValue(new Error("window unavailable"));
+  render(<DockLayout panels={panels} native />);
+  await waitFor(() =>
+    expect(screen.getByRole("alert").textContent).toContain(
+      "window unavailable",
+    ),
+  );
+  expect(screen.getByText("file content")).toBeTruthy();
 });

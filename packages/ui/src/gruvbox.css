@@ -1798,3 +1798,7 @@ code {
 .explanation-source-details > summary {
   cursor: pointer;
 }
+
+.session-notice { display: flex; align-items: center; gap: 8px; padding: 4px 8px; color: var(--muted); }
+.session-notice details { min-width: 0; }
+.session-notice li { overflow-wrap: anywhere; }

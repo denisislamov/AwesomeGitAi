@@ -36,7 +36,8 @@ export function DockLayout({
 }) {
   const [layout, dispatch] = useReducer(layoutReducer, null, () => {
     try {
-      return restoreLayout(localStorage.getItem(key));
+      const saved = restoreLayout(localStorage.getItem(key));
+      return native ? saved : { ...saved, detached: [] };
     } catch {
       return initialLayout();
     }
@@ -44,6 +45,8 @@ export function DockLayout({
   const [error, setError] = useState("");
   const [pending, setPending] = useState<PanelId[]>([]);
   const drag = useRef<PanelId | null>(null);
+  const startupPanels = useRef([...layout.detached]);
+  const startup = useRef<Promise<PromiseSettledResult<void>[]> | null>(null);
   const latest = useRef(layout);
   latest.current = layout;
   useEffect(() => {
@@ -57,8 +60,30 @@ export function DockLayout({
     if (!native) return;
     let stopped = false;
     let running = false;
+    let ready = false;
+    if (!startup.current)
+      startup.current = Promise.allSettled(
+        startupPanels.current.map((p) => openPanel(p)),
+      );
+    setPending(startupPanels.current);
+    void startup.current.then((results) => {
+      if (stopped) return;
+      results.forEach((result, i) => {
+        if (result.status === "rejected") {
+          dispatch({ type: "redock", panel: startupPanels.current[i] });
+          setError(`Could not restore window: ${String(result.reason)}`);
+        }
+      });
+      setPending([]);
+      ready = true;
+    });
+    const leaving = () => {
+      stopped = true;
+    };
+    window.addEventListener("pagehide", leaving);
+    window.addEventListener("beforeunload", leaving);
     const check = async () => {
-      if (running) return;
+      if (running || !ready || stopped) return;
       running = true;
       try {
         const candidates = [...latest.current.detached];
@@ -76,6 +101,8 @@ export function DockLayout({
     return () => {
       stopped = true;
       clearInterval(timer);
+      window.removeEventListener("pagehide", leaving);
+      window.removeEventListener("beforeunload", leaving);
     };
   }, [native]);
   async function detach(p: PanelId) {
@@ -91,6 +118,7 @@ export function DockLayout({
     }
   }
   async function show(p: PanelId) {
+    if (pending.includes(p)) return;
     try {
       if (layout.detached.includes(p)) await closePanel(p);
       dispatch({ type: "show", panel: p });

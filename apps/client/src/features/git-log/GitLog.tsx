@@ -59,7 +59,7 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
     { kind: "CommitDetails" }
   > | null>(null);
   const [err, setErr] = useState("");
-  const [base, setBase] = useState<string | null>(null);
+  const base = s.selectedCommitBase;
   const commits = workspace.visibleCommits();
   const rows = useMemo(() => graphRows(commits), [s.commits, s.branchFilter]);
   const shown = rows.filter((r) =>
@@ -93,7 +93,6 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
       active = false;
     };
   }, [s.selectedCommit, s.repo?.repo_id, s.repo?.worktree_id, base]);
-  useEffect(() => setBase(null), [s.repo?.repo_id, s.repo?.worktree_id]);
   const open = (path: RepoPath) => {
     if (details)
       void workspace.openFile(
@@ -285,7 +284,6 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                 <button
                   className="commit-base-action"
                   onClick={() => {
-                    setBase(details.oid);
                     workspace.selectCommit(details.oid, details.oid);
                   }}
                 >
@@ -298,7 +296,6 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                   <button
                     aria-label="Clear base"
                     onClick={() => {
-                      setBase(null);
                       if (s.selectedCommit)
                         workspace.selectCommit(s.selectedCommit);
                     }}

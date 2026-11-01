@@ -50,12 +50,12 @@ describe("IDE layout", () => {
     ])
       expect(restoreLayout(raw)).toEqual(initialLayout());
   });
-  it("persists geometry but redocks stale detached windows after restart", () => {
+  it("retains detached panel identities for native startup restoration", () => {
     const s = layoutReducer(initialLayout(), {
       type: "detach",
       panel: "files",
     });
-    expect(restoreLayout(JSON.stringify(s))).toEqual(initialLayout());
+    expect(restoreLayout(JSON.stringify(s))).toEqual(s);
   });
 });
 

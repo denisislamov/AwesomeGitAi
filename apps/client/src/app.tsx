@@ -1,3 +1,4 @@
+import { useWorkspaceSession } from "./features/session/useWorkspaceSession";
 import {
   FileUsageHint,
   RelationsHover,
@@ -96,6 +97,8 @@ export function App({
     }
   });
   const chooseRepository = async (path: string) => {
+    session.cancel();
+    session.dismiss();
     await workspace.openRepository(path);
     if (!workspace.state.error && workspace.state.repo) {
       setRoot(path);
@@ -197,6 +200,14 @@ export function App({
       updateSettings({ view: "split" });
   }, [workspace.state.recordedLocation]);
   const settings = { view, light, scale, showDeleted, ignoreWhitespace, mode };
+  const session = useWorkspaceSession(
+    workspace,
+    !panel,
+    settings,
+    applySettings,
+  );
+  const restoringSession = useRef(false);
+  restoringSession.current = session.restoring;
   const shared = useRef(panelSnapshot(workspace, settings));
   shared.current = panelSnapshot(workspace, settings);
   const applySettingsRef = useRef(applySettings);
@@ -259,8 +270,10 @@ export function App({
     let stopped = false;
     let timer: ReturnType<typeof setTimeout>;
     const tick = async () => {
-      await workspace.pollGit();
-      await workspace.poll();
+      if (!restoringSession.current) {
+        await workspace.pollGit();
+        await workspace.poll();
+      }
       if (!stopped) timer = setTimeout(tick, 1200);
     };
     timer = setTimeout(tick, 1200);
@@ -820,6 +833,26 @@ export function App({
       {s.error && (
         <div role="alert" className="error-banner">
           Action failed: {s.error}. The open snapshot is preserved.
+        </div>
+      )}
+      {session.restoring && (
+        <div role="status" className="session-notice">
+          Restoring previous session…
+          <button onClick={session.cancel}>Stop restoring</button>
+        </div>
+      )}
+      {session.warnings.length > 0 && (
+        <div className="session-notice" role="status">
+          <details>
+            <summary>Some items could not be restored</summary>
+            <ul>
+              {session.warnings.map((message, i) => (
+                <li key={i}>{message}</li>
+              ))}
+            </ul>
+          </details>
+          <button onClick={() => setDialog("repository")}>Open project…</button>
+          <button onClick={session.dismiss}>Dismiss</button>
         </div>
       )}
       <DockLayout
