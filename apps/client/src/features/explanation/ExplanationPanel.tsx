@@ -1,3 +1,4 @@
+import { ExplanationProse } from "./ExplanationProse";
 import { SymbolText } from "../relations/RelationsHover";
 import React, { useEffect, useMemo, useState } from "react";
 import { isRecordedReview, type Workspace } from "../../workspace";
@@ -47,6 +48,11 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
               v.anchor.end_line >= selection.startLine),
       ),
   );
+  const diagrams = s.learningItems.filter(
+    (item) =>
+      item.kind === "diagram" &&
+      visible.some((d) => d.target_snapshot_id === item.snapshot_id),
+  );
   return (
     <aside
       aria-label="Explanation"
@@ -88,7 +94,20 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
         {s.explanationsTruncated && (
           <p>Showing the latest 100 decisions for this file.</p>
         )}
-        {visible.map((d) => (
+        {diagrams.length > 0 && (
+          <button
+            className="explanation-diagram-link"
+            onClick={() =>
+              diagrams.length === 1
+                ? void workspace.openLearning(diagrams[0].id)
+                : workspace.setLearningMode("diagram")
+            }
+            title={diagrams.map((d) => d.title).join(" · ")}
+          >
+            {diagrams.length === 1 ? "View diagram" : "View diagrams"}
+          </button>
+        )}
+        {visible.filter((d) => !d.superseded_by).map((d) => (
           <DecisionCard key={d.id} d={d} workspace={workspace} />
         ))}
         {tab && (
@@ -124,6 +143,9 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
                 explanation coverage, not correctness.
               </p>
             )}
+            {visible.map((d) => (
+              <DecisionDetails key={d.id} d={d} workspace={workspace} />
+            ))}
           </details>
         )}
         {tab && (
@@ -157,7 +179,7 @@ export function ExplanationPanel({ workspace }: { workspace: Workspace }) {
     </aside>
   );
 }
-function DecisionCard({
+function DecisionDetails({
   d,
   workspace,
 }: {
@@ -170,20 +192,18 @@ function DecisionCard({
     tab?.data.base.id === d.base_snapshot_id &&
     tab?.data.target.id === d.target_snapshot_id;
   return (
-    <article className="context-card decision-card">
+    <article className="decision-details">
       <small>
         Agent reported · revision {d.revision}
         {d.superseded_by ? " · superseded" : ""}
       </small>
-      <h3>
-        <SymbolText workspace={workspace} text={d.summary} />
-      </h3>
-      <p>
-        <SymbolText workspace={workspace} text={d.behavior} />
-      </p>
-      <p>
-        <SymbolText workspace={workspace} text={d.rationale} />
-      </p>
+      <h4>{d.summary}</h4>
+      {d.superseded_by && (
+        <>
+          <ExplanationProse workspace={workspace} text={d.behavior} />
+          <ExplanationProse workspace={workspace} text={d.rationale} />
+        </>
+      )}
       {d.anchors.map((v, i) => {
         const range =
           typeof v.resolution === "object" ? v.resolution.Relocated : v.anchor;
@@ -229,8 +249,7 @@ function DecisionCard({
           </button>
         </>
       )}
-      <details>
-        <summary>Details and checks</summary>
+      <div className="decision-checks">
         <h4>Constraints</h4>
         {d.constraints.length ? (
           <ul>
@@ -280,7 +299,7 @@ function DecisionCard({
             Open newer version
           </button>
         )}
-      </details>
+      </div>
       {d.review && (
         <p>
           Your review:{" "}
@@ -328,6 +347,29 @@ function DecisionCard({
             </button>
           </div>
         </div>
+      )}
+    </article>
+  );
+}
+
+function DecisionCard({
+  d,
+  workspace,
+}: {
+  d: DecisionView;
+  workspace: Workspace;
+}) {
+  return (
+    <article className="context-card decision-card">
+      <h3>
+        <SymbolText workspace={workspace} text={d.summary} />
+      </h3>
+      <ExplanationProse workspace={workspace} text={d.behavior} />
+      {d.rationale && (
+        <>
+          <h4 className="explanation-section-label">Why this approach</h4>
+          <ExplanationProse workspace={workspace} text={d.rationale} />
+        </>
       )}
     </article>
   );

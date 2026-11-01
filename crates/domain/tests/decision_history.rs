@@ -400,6 +400,47 @@ fn closed_revision_cannot_rebind_source_or_reopen_session() {
     );
 }
 #[test]
+fn closed_session_can_add_a_diagram_of_its_existing_source_without_reopening() {
+    let mut f = Fixture::new();
+    let s = f.session();
+    let c = f.capture(&s);
+    f.call("session_close",write(json!({"session_id":s["session_id"],"final_snapshot_id":c["snapshot_id"],"outcome":"completed","summary":"done","unresolved":[]}))).unwrap();
+    let closed = f
+        .store
+        .doc("agent_session", s["session_id"].as_str().unwrap())
+        .unwrap();
+    let diagram = json!({"snapshot_id":c["snapshot_id"],"title":"Recorded source flow","assumptions":["Educational model"],"nodes":[{"id":"a","label":"Read source","location":{"path":RepoPath::from_bytes(b"a.cs").unwrap(),"line":1}}],"edges":[]});
+    let args = write(json!({"session_id":s["session_id"],"diagram":diagram}));
+    let receipt = f.call("diagram_record", args.clone()).unwrap();
+    assert_eq!(f.call("diagram_record", args.clone()).unwrap(), receipt);
+    assert_eq!(
+        f.store
+            .doc("agent_session", s["session_id"].as_str().unwrap())
+            .unwrap(),
+        closed
+    );
+    let doc = f
+        .store
+        .doc("diagram", receipt["artifact_id"].as_str().unwrap())
+        .unwrap()
+        .unwrap();
+    assert_eq!(doc["post_session"], true);
+    let mut bad = diagram.clone();
+    bad["nodes"][0]["location"]["line"] = json!(99);
+    assert!(
+        f.call(
+            "diagram_record",
+            write(json!({"session_id":s["session_id"],"diagram":bad}))
+        )
+        .is_err()
+    );
+    f.grant = Uuid::new_v4();
+    assert_eq!(
+        f.call("diagram_record", args).unwrap_err().code,
+        "SCOPE_DENIED"
+    );
+}
+#[test]
 fn learning_artifacts_are_owned_snapshot_bound_and_idempotent() {
     let mut f = Fixture::new();
     let session = f.session();

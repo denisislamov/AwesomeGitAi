@@ -1682,7 +1682,19 @@ code {
 }
 .learning-panel .decision-card {
   background: color-mix(in srgb, var(--panel) 70%, transparent);
+  font-family: inherit;
+  font-size: 1em;
+  color: var(--text);
 }
+.explanation-prose { line-height: 1.5; }
+.explanation-prose p { margin: 0.65em 0; white-space: pre-line; }
+.explanation-prose ul, .explanation-prose ol { margin: 0.6em 0; padding-left: 1.65em; }
+.explanation-prose li { margin: 0.35em 0; white-space: pre-line; }
+.explanation-prose h4, .explanation-section-label { margin: 1em 0 0.4em; font-size: inherit; }
+.explanation-prose code { color: var(--text); background: #83a59812; border-radius: 3px; padding: 0 3px; }
+.explanation-prose pre { overflow-x: auto; padding: 8px; background: var(--code); border-radius: 4px; }
+.explanation-prose pre code { padding: 0; background: transparent; }
+.decision-details { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--border); }
 .learning-panel .learning-picker,
 .learning-panel .trace-controls {
   font-size: 0.9em;

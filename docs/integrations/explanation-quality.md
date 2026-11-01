@@ -29,11 +29,42 @@ Use existing decision fields; do not add unsupported tool arguments:
 
 Prefer a short purpose, a causal walkthrough and a concrete outcome over a line-by-line paraphrase. For a nontrivial method, separate distinct decisions into anchored explanations rather than attaching one vague sentence to the whole file. Use trace_record for a useful multi-step example with inputs, before/after locals, call/return transitions and human explanations; label it educational, not executed. Use a diagram only if it clarifies a real relationship. Do not force traces/diagrams for trivial edits or flood the reader with every variable.
 
+## Make the result readable
+
+Write real blank lines between paragraphs, with one idea per short paragraph. Put ordered checks in numbered lists (one item per line); use bullet lists for parallel inputs/outputs. Use short Markdown headings for longer explanations, **bold** sparingly, backticks for identifiers/values and fenced code blocks for nontrivial example inputs. Do not deliver a single prose wall or place the whole explanation in a code block. The client supports these basic constructs, not embedded HTML or arbitrary Markdown extensions.
+
+Before saving, explicitly decide whether a diagram improves understanding. For three or more ordered guards, branching outcomes, or a pipeline across multiple methods/classes, normally submit a concise diagram_record along with the explanation. CanStart's six ordered checks and early returns are a clear example: show the pass path, each rejection and the successful result. A prose list is not a substitute for the requested diagram. If a diagram is useful but cannot be recorded, report the concrete blocker instead of silently omitting it. Do not invent dependencies or add decorative diagrams to trivial code.
+
+diagram_record may supplement a closed session using a snapshot already owned by that same session/grant. Source locations must validate against that immutable snapshot. This appends an agent-reported model without reopening the session or changing previous explanations; use a stable idempotency key for retries. New snapshots, traces and evidence still require an open session. Preserve the already chosen explanation level for such supplements.
+
 ## Calibration example
 
 Weak: "CanStart checks a new request by priority and starts nothing."
 
-Better Junior behavior, for source that actually implements these checks: "CanStart answers whether a character may begin changing stance. It receives the current stance/transition state and conditions such as being on the ground or dashing. It checks invalid state, unavailable actions, being airborne, an existing stance transition, an active dash, then insufficient headroom when crouched. At the first failed check it returns false and writes the reason into rejection. For example, if the character is airborne and also dashing, the result is false with Airborne: the method returns before reaching the dash check. If every check passes, it returns true with rejection = None. It does not change the stance or start a timer; the caller would have to perform the transition separately. This method alone does not establish that such a caller is already implemented."
+Better Junior behavior, for source that actually implements these checks:
+
+### What it does
+
+`CanStart` answers whether a character may begin changing stance. It reads the current stance/transition state and conditions supplied by its caller.
+
+### Check order
+
+1. Invalid stance or phase → `InvalidState`.
+2. Actions unavailable → `CharacterUnavailable`.
+3. Character airborne → `Airborne`.
+4. A stance transition is active → `TransitionActive`.
+5. Dash is active → `DashActive`.
+6. Crouched character lacks standing headroom → `BlockedOverhead`.
+
+The first failed check returns `false` and writes its reason into `rejection`. Passing all checks returns `true` and `None`.
+
+### Example
+
+If `IsGrounded = false` and `IsDashActive = true`, the result is `false` with `Airborne`: execution returns before reaching the dash check. This is a source walkthrough, not a test run.
+
+### What the result means
+
+The method does not change stance or start a timer. A caller must perform the transition separately; this method alone does not establish whether that caller is implemented. Pair this ordered branch explanation with a diagram of the checks and exits.
 
 Better rationale framing: "Returning one explicit reason lets the caller distinguish an airborne rejection from an obstruction. The source proves which reason wins when multiple checks fail. Why the author chose that exact order requires a requirement or recorded decision; do not infer that motive solely from the order of if statements."
 

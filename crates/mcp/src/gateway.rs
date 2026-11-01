@@ -219,7 +219,7 @@ impl ServerHandler for Gateway {
                 "snapshot_capture"=>"Capture exact source content for this session and expected generation; use returned snapshot and comparison anchors.",
                 "decision_record"=>"Record agent-reported rationale, concrete behavior, alternatives and exact snapshot anchors. Follow integration_guide explanation_policy and the user-chosen Junior / Middle / Senior level; cannot create human acceptance.",
                 "trace_record"=>"Record a snapshot-bound educational trace with explicit inputs, assumptions, stack, locals and step links. Not observed execution.",
-                "diagram_record"=>"Record a snapshot-bound diagram with typed nodes/edges and reported, inferred or unknown relationships.",
+                "diagram_record"=>"Record a snapshot-bound diagram with typed nodes/edges and reported, inferred or unknown relationships. May supplement a closed session using an existing snapshot owned by that session/grant. Include useful control-flow diagrams per explanation_policy.",
                 "event_append"=>"Append an agent-reported action, question, clarification or observation to the session.",
                 "evidence_record"=>"Record agent-reported check evidence; this never becomes independent runner evidence.",
                 "decision_supersede"=>"Revise an owned decision at its expected revision, retaining history. Allowed after session closure for narrative changes with the same session_id, snapshot_id and anchors; the session stays closed.",

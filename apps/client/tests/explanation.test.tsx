@@ -1,6 +1,6 @@
 import React from "react";
 import { it, expect, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { Workspace, type CodeTab } from "../src/workspace";
 import { coverage } from "../src/features/explanation/coverage";
 import { ExplanationPanel } from "../src/features/explanation/ExplanationPanel";
@@ -72,6 +72,29 @@ it("counts changed old and new lines, excluding unbound and superseded explanati
     0,
   );
 });
+it("offers a diagram for the explanation's recorded version, not an unrelated snapshot", () => {
+  const w = new Workspace({ read: vi.fn(), desktop: vi.fn() });
+  w.state.tabs = [tab];
+  w.state.activeTab = tab.id;
+  w.state.explanations = [decision];
+  w.state.learningItems = [
+    {
+      id: "diagram",
+      kind: "diagram",
+      title: "Recorded flow",
+      snapshot_id: "target",
+      source: "agent_reported",
+    },
+  ];
+  const open = vi.spyOn(w, "openLearning").mockResolvedValue();
+  const ui = render(<ExplanationPanel workspace={w} />);
+  fireEvent.click(screen.getByRole("button", { name: "View diagram" }));
+  expect(open).toHaveBeenCalledWith("diagram");
+  w.state.learningItems[0].snapshot_id = "unrelated";
+  ui.rerender(<ExplanationPanel workspace={w} />);
+  expect(screen.queryByRole("button", { name: "View diagram" })).toBeNull();
+  cleanup();
+});
 it("human acceptance is absent for another pair and alternatives are not fabricated", () => {
   const w = new Workspace({ read: vi.fn(), desktop: vi.fn() });
   w.state.tabs = [tab];
@@ -81,6 +104,15 @@ it("human acceptance is absent for another pair and alternatives are not fabrica
   expect(
     screen.queryByRole("button", { name: "Accepted", exact: true }),
   ).toBeNull();
+  expect(
+    screen
+      .getByText(
+        "Different snapshot pair. Review is available in the original comparison.",
+      )
+      .closest("details")?.open,
+  ).toBe(false);
+  expect(screen.queryByText("Details and checks")).toBeNull();
+  fireEvent.click(screen.getByText("Source details"));
   expect(
     screen.getByRole("button", { name: "Open original version" }),
   ).toBeTruthy();
@@ -117,5 +149,21 @@ it("describes identical recorded code without changed-line coverage", () => {
     screen.getByText("new behavior").compareDocumentPosition(details) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
+  cleanup();
+});
+
+it("keeps superseded prose in source details rather than mixing it with the current explanation", () => {
+  const w = new Workspace({ read: vi.fn(), desktop: vi.fn() });
+  w.state.tabs = [tab];
+  w.state.activeTab = tab.id;
+  w.state.explanations = [
+    { ...decision, id: "old", behavior: "Earlier wording", superseded_by: "d" },
+    decision,
+  ];
+  render(<ExplanationPanel workspace={w} />);
+  expect(screen.getByText("Earlier wording").closest("details")?.open).toBe(false);
+  expect(screen.getByText("new behavior").closest("details")).toBeNull();
+  fireEvent.click(screen.getByText("Source details"));
+  expect(screen.getByText("Earlier wording")).toBeTruthy();
   cleanup();
 });

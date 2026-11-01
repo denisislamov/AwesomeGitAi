@@ -272,6 +272,10 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   await expect(
     page.getByRole("heading", { name: "Начальный баланс 75", exact: true }),
   ).toBeVisible();
+  await expect(page.locator(".decision-card .explanation-prose ol li")).toHaveCount(2);
+  await expect(page.getByText("Different snapshot pair. Review is available in the original comparison.")).not.toBeVisible();
+  await expect(page.getByRole("button", { name: "Open original version" })).not.toBeVisible();
+  await page.screenshot({ path: "../../.superpowers/readable-explanation.png" });
   await page.getByTitle(/Начальный баланс 75/).click();
   await expect(page.locator(".cm-explained-line")).toHaveCount(1);
   await expect(page.getByTestId("explanation-target")).toContainText(
@@ -280,13 +284,14 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   await expect(
     page.getByRole("button", { name: "Accepted", exact: true }),
   ).toHaveCount(0);
+  await page.getByText("Source details", { exact: true }).click();
   await page
     .getByRole("button", { name: "Open original version", exact: true })
     .click();
   await expect(
     page.getByRole("button", { name: "Accepted", exact: true }),
   ).toBeVisible();
-  await page.getByText("Details and checks", { exact: true }).click();
+  await expect(page.getByText("Details and checks", { exact: true })).toHaveCount(0);
   await expect(
     page.getByText("The agent did not report alternatives.", { exact: true }),
   ).toBeVisible();

@@ -416,16 +416,20 @@ pub fn agent_call(
     }
     if let Some(session) = &session {
         if session["status"] != "open" {
-            if tool != "decision_supersede" || session["status"] != "closed" {
+            if !matches!(tool, "decision_supersede" | "diagram_record")
+                || session["status"] != "closed"
+            {
                 return Err(err("SESSION_CLOSED"));
             }
-            // A closed session permits editorial revisions, not a new source history.
-            let previous = old.as_ref().ok_or_else(|| err("SCOPE_DENIED"))?;
-            let replacement = &args["new_decision"];
-            if replacement["snapshot_id"] != previous["snapshot_id"]
-                || replacement["anchors"] != previous["anchors"]
-            {
-                return Err(err("CLOSED_SESSION_SOURCE_CHANGE"));
+            if tool == "decision_supersede" {
+                // A closed session permits editorial revisions, not a new source history.
+                let previous = old.as_ref().ok_or_else(|| err("SCOPE_DENIED"))?;
+                let replacement = &args["new_decision"];
+                if replacement["snapshot_id"] != previous["snapshot_id"]
+                    || replacement["anchors"] != previous["anchors"]
+                {
+                    return Err(err("CLOSED_SESSION_SOURCE_CHANGE"));
+                }
             }
         }
     }
@@ -493,7 +497,7 @@ pub fn agent_call(
                 r,
                 grant,
                 id,
-                json!({"session_id":session["id"],"snapshot_id":payload["snapshot_id"],"title":payload["title"],"artifact":payload,"source":"agent_reported"}),
+                json!({"session_id":session["id"],"snapshot_id":payload["snapshot_id"],"title":payload["title"],"artifact":payload,"source":"agent_reported","post_session":session["status"] == "closed"}),
             );
             changes.push(change(kind, doc, r, 0));
             json!({"artifact_id":id,"snapshot_id":payload["snapshot_id"],"source":"agent_reported"})
