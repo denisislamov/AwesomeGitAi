@@ -239,7 +239,11 @@ export async function dispatchPanelAction(
       if (w.state.tabs.some((t) => t.id === p.id)) w.close(p.id);
       break;
     case "select_commit":
-      if (w.state.commits.some((c) => c.oid === p.oid)) w.selectCommit(p.oid);
+      if (
+        w.state.commits.some((c) => c.oid === p.oid) &&
+        (p.base == null || w.state.commits.some((c) => c.oid === p.base))
+      )
+        w.selectCommit(p.oid, p.base ?? null);
       break;
     case "select_branch":
       if (p.name === "all" || w.state.branches.some((b) => b.name === p.name))
@@ -452,8 +456,8 @@ export class DetachedWorkspace extends Workspace {
   override close(id: string) {
     void this.action("close_tab", { id });
   }
-  override selectCommit(oid: string) {
-    void this.action("select_commit", { oid });
+  override selectCommit(oid: string, base: string | null = null) {
+    void this.action("select_commit", { oid, base });
   }
   override filterBranch(name: string) {
     void this.action("select_branch", { name });

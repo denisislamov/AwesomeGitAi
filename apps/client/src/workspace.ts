@@ -131,6 +131,7 @@ type State = {
   cursor: string | null;
   branchFilter: string;
   selectedCommit: string | null;
+  filesCommit: { oid: string; base: string | null } | null;
   tabs: CodeTab[];
   activeTab: string | null;
   selection: CodeSelection | null;
@@ -181,6 +182,7 @@ export class Workspace {
     cursor: null,
     branchFilter: "all",
     selectedCommit: null,
+    filesCommit: null,
     tabs: [],
     activeTab: null,
     selection: null,
@@ -234,6 +236,7 @@ export class Workspace {
     this.patch({
       tabs: [],
       activeTab: null,
+      filesCommit: null,
       selection: null,
       explanations: [],
       explanationsTruncated: false,
@@ -285,6 +288,7 @@ export class Workspace {
         explanationsTruncated: false,
         explanationsError: null,
         activeTab: null,
+        filesCommit: null,
         selection: null,
         paths: [],
         commits: [],
@@ -721,6 +725,7 @@ export class Workspace {
     this.patch({
       tabs: [...tabs, back.tab],
       activeTab: back.tab.id,
+      filesCommit: null,
       selection: back.selection,
       relations: { ...back.relations, open: false },
       relationLocation: null,
@@ -843,6 +848,7 @@ export class Workspace {
       this.patch({
         tabs: [...tabs, tab],
         activeTab: id,
+        filesCommit: null,
         relationLocation: null,
         explanations: [],
         explanationsTruncated: false,
@@ -858,12 +864,13 @@ export class Workspace {
   activate(id: string) {
     ++this.opening;
     if (this.state.activeTab === id) {
-      this.patch({ busy: false });
+      this.patch({ busy: false, filesCommit: null });
       return;
     }
     this.showRelations(false);
     this.patch({
       activeTab: id,
+      filesCommit: null,
       relationLocation: null,
       selection: null,
       busy: false,
@@ -877,6 +884,7 @@ export class Workspace {
     const tabs = this.state.tabs.filter((t) => t.id !== id);
     this.patch({
       tabs,
+      filesCommit: this.state.activeTab === id ? null : this.state.filesCommit,
       explanations: [],
       explanationsTruncated: false,
       activeTab:
@@ -891,8 +899,14 @@ export class Workspace {
     const tab = this.state.tabs.find((t) => t.id === id);
     if (tab) tab.scroll = scroll;
   }
-  selectCommit(oid: string) {
-    this.patch({ selectedCommit: oid });
+  selectCommit(oid: string, base: string | null = null) {
+    // A later commit selection wins over an in-flight file open.
+    ++this.opening;
+    this.patch({
+      selectedCommit: oid,
+      filesCommit: { oid, base },
+      busy: false,
+    });
   }
   filterBranch(name: string) {
     this.patch({ branchFilter: name });

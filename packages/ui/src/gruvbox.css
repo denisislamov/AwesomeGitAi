@@ -6,6 +6,27 @@
 * {
   box-sizing: border-box;
 }
+/* Compact native-webview scrollbars in both docked and detached panels. */
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted, #928374) 65%, transparent);
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted, #928374);
+}
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; }
+}
 body {
   margin: 0;
 }

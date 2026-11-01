@@ -189,7 +189,7 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                 aria-label={`Commit ${r.commit.subject}`}
                 aria-pressed={s.selectedCommit === r.commit.oid}
                 style={{ top: (start + i) * 38 }}
-                onClick={() => workspace.selectCommit(r.commit.oid)}
+                onClick={() => workspace.selectCommit(r.commit.oid, base)}
               >
                 <svg
                   width={Math.max(
@@ -284,7 +284,10 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                   )}
                 <button
                   className="commit-base-action"
-                  onClick={() => setBase(details.oid)}
+                  onClick={() => {
+                    setBase(details.oid);
+                    workspace.selectCommit(details.oid, details.oid);
+                  }}
                 >
                   Use as comparison base
                 </button>
@@ -292,7 +295,14 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
               {base && (
                 <p>
                   Base: {base.slice(0, 8)}{" "}
-                  <button aria-label="Clear base" onClick={() => setBase(null)}>
+                  <button
+                    aria-label="Clear base"
+                    onClick={() => {
+                      setBase(null);
+                      if (s.selectedCommit)
+                        workspace.selectCommit(s.selectedCommit);
+                    }}
+                  >
                     ×
                   </button>
                 </p>

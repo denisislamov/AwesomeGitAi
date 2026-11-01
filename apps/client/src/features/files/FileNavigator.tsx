@@ -19,13 +19,21 @@ export function FileNavigator({
 }) {
   const s = w.state,
     tab = w.active();
+  const selected = s.filesCommit;
   const historical =
-    !!tab &&
-    [tab.base, tab.target].every((r) => typeof r === "object" || r === "Empty");
+    !!selected ||
+    (!!tab &&
+      [tab.base, tab.target].every(
+        (r) => typeof r === "object" || r === "Empty",
+      ));
   const key = JSON.stringify([
     s.repo?.repo_id,
     s.repo?.worktree_id,
-    historical ? [tab?.base, tab?.target] : "working",
+    selected
+      ? ["commit", selected.oid, selected.base]
+      : historical
+        ? [tab?.base, tab?.target]
+        : "working",
   ]);
   const [choice, setChoice] = useState<{
     key: string;
@@ -44,33 +52,41 @@ export function FileNavigator({
   const [result, setResult] = useState<{
     key: string;
     paths: RepoPath[];
+    base?: Revision;
     error?: string;
   } | null>(null);
   const commit =
-    tab &&
-    typeof tab.target === "object" &&
-    "Commit" in tab.target &&
-    (tab.base === "Empty" ||
-      (typeof tab.base === "object" && "Commit" in tab.base));
+    !!selected ||
+    (tab &&
+      typeof tab.target === "object" &&
+      "Commit" in tab.target &&
+      (tab.base === "Empty" ||
+        (typeof tab.base === "object" && "Commit" in tab.base)));
   useEffect(() => {
     let current = true;
-    if (!commit || !tab || !s.repo || mode !== "comparison") return;
-    const target = tab.target as { Commit: { oid: string } };
-    const base =
-      tab.base === "Empty"
+    if (!commit || !s.repo || mode !== "comparison") return;
+    const oid =
+      selected?.oid ?? (tab!.target as { Commit: { oid: string } }).Commit.oid;
+    const base = selected
+      ? selected.base
+      : tab!.base === "Empty"
         ? null
-        : (tab.base as { Commit: { oid: string } }).Commit.oid;
+        : (tab!.base as { Commit: { oid: string } }).Commit.oid;
     setResult(null);
     w.api
       .desktop({
         kind: "CommitDetails",
         scope: w.scope(),
-        oid: target.Commit.oid,
+        oid,
         base,
       })
       .then((r) => {
         if (current && r.kind === "CommitDetails")
-          setResult({ key, paths: r.paths });
+          setResult({
+            key,
+            paths: r.paths,
+            base: r.base_oid ? { Commit: { oid: r.base_oid } } : "Empty",
+          });
       })
       .catch((e) => {
         if (current) setResult({ key, paths: [], error: e.code ?? String(e) });
@@ -88,12 +104,23 @@ export function FileNavigator({
         ] as [string, string][],
     ) ?? [],
   );
+  const comparison = selected
+    ? {
+        base:
+          result?.key === key && result.base
+            ? result.base
+            : selected.base
+              ? ({ Commit: { oid: selected.base } } as Revision)
+              : ("Empty" as Revision),
+        target: { Commit: { oid: selected.oid } } as Revision,
+      }
+    : tab;
   let paths = s.paths;
-  let recorded = !!tab && isRecordedReview(tab);
+  let recorded = !selected && !!tab && isRecordedReview(tab);
   const status = new Map<string, string>();
-  if (mode === "comparison" && tab) {
+  if (mode === "comparison" && comparison) {
     if (commit) paths = result?.key === key ? result.paths : [];
-    else {
+    else if (tab) {
       const old = new Map(
         tab.data.base.files.map((f) => [f.path.raw_base64, f]),
       );
@@ -154,8 +181,8 @@ export function FileNavigator({
         mode: "all",
       });
     const pair: [Revision, Revision] =
-      mode === "comparison" && tab
-        ? [tab.base, tab.target]
+      mode === "comparison" && comparison
+        ? [comparison.base, comparison.target]
         : stagingMode === "index"
           ? ["Head", "Index"]
           : ["Index", "Worktree"];
@@ -173,7 +200,7 @@ export function FileNavigator({
         value={mode}
         onChange={(e) => setChoice({ key, mode: e.target.value as Mode })}
       >
-        <option value="comparison" disabled={!tab}>
+        <option value="comparison" disabled={!comparison}>
           {recorded
             ? "Recorded files"
             : commit
@@ -183,15 +210,15 @@ export function FileNavigator({
         <option value="working">Working changes</option>
         <option value="all">All files</option>
       </select>
-      {mode === "comparison" && tab && (
+      {mode === "comparison" && comparison && (
         <small
           className="file-scope-note"
-          title={`${revisionLabel(tab.base)} → ${revisionLabel(tab.target)}`}
+          title={`${revisionLabel(comparison.base)} → ${revisionLabel(comparison.target)}`}
         >
           {recorded
             ? "Saved explanation · identical versions, no + / −"
             : commit
-              ? `${revisionLabel(tab.base)} → ${revisionLabel(tab.target)} · changed files`
+              ? `${revisionLabel(comparison.base)} → ${revisionLabel(comparison.target)} · changed files`
               : "Files in open comparison"}
         </small>
       )}

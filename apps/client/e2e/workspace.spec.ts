@@ -272,10 +272,20 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   await expect(
     page.getByRole("heading", { name: "Начальный баланс 75", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".decision-card .explanation-prose ol li")).toHaveCount(2);
-  await expect(page.getByText("Different snapshot pair. Review is available in the original comparison.")).not.toBeVisible();
-  await expect(page.getByRole("button", { name: "Open original version" })).not.toBeVisible();
-  await page.screenshot({ path: "../../.superpowers/readable-explanation.png" });
+  await expect(
+    page.locator(".decision-card .explanation-prose ol li"),
+  ).toHaveCount(2);
+  await expect(
+    page.getByText(
+      "Different snapshot pair. Review is available in the original comparison.",
+    ),
+  ).not.toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open original version" }),
+  ).not.toBeVisible();
+  await page.screenshot({
+    path: "../../.superpowers/readable-explanation.png",
+  });
   await page.getByTitle(/Начальный баланс 75/).click();
   await expect(page.locator(".cm-explained-line")).toHaveCount(1);
   await expect(page.getByTestId("explanation-target")).toContainText(
@@ -291,7 +301,9 @@ test("real MCP explanations appear at code and human acceptance stays on the ori
   await expect(
     page.getByRole("button", { name: "Accepted", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("Details and checks", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText("Details and checks", { exact: true }),
+  ).toHaveCount(0);
   await expect(
     page.getByText("The agent did not report alternatives.", { exact: true }),
   ).toBeVisible();
@@ -855,9 +867,19 @@ test("file list follows open historical code and keeps working changes explicit"
   await expect(
     details.getByRole("region", { name: "Commit message" }),
   ).toContainText("Initial wallet");
-  await details.getByRole("button", { name: "Code.cs", exact: true }).click();
   const files = page.getByLabel("Repository files", { exact: true });
+  await expect(page.getByRole("tab")).toHaveCount(0);
   await expect(page.getByLabel("File list scope")).toHaveValue("comparison");
+  await page.getByLabel("File list scope").selectOption("working");
+  await page.getByLabel("File list scope").selectOption("comparison");
+  await expect(
+    files.getByRole("button", { name: "File Code.cs", exact: true }),
+  ).toBeVisible();
+  const scrollbar = await files.locator(".file-list").evaluate((el) => {
+    const style = getComputedStyle(el, "::-webkit-scrollbar");
+    return { width: style.width, height: style.height };
+  });
+  expect(scrollbar).toEqual({ width: "7px", height: "7px" });
   await files
     .getByRole("button", { name: "File EarlierDeleted.cs", exact: true })
     .click();
@@ -871,8 +893,11 @@ test("file list follows open historical code and keeps working changes explicit"
   await page
     .getByRole("button", { name: "Commit Remove old class", exact: true })
     .click();
-  await details
-    .getByRole("button", { name: "EarlierDeleted.cs", exact: true })
+  await expect(page.getByLabel("New code version")).toContainText(
+    "class EarlierDeleted",
+  );
+  await files
+    .getByRole("button", { name: "File EarlierDeleted.cs", exact: true })
     .click();
   await expect(page.getByText("File deleted", { exact: true })).toBeVisible();
   await expect(

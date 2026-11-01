@@ -39,7 +39,7 @@ impl PanelBridge {
         oid: &str,
         base: Option<&str>,
     ) -> bool {
-        if caller != "panel-git" {
+        if !matches!(caller, "panel-git" | "panel-files") {
             return false;
         }
         let Ok(data) = self.0.lock() else {
@@ -58,8 +58,30 @@ impl PanelBridge {
         let repo = &workspace["repo"];
         if repo["repo_id"] != scope["repo_id"]
             || repo["worktree_id"] != scope["worktree_id"]
-            || workspace["selectedCommit"].as_str() != Some(oid)
         {
+            return false;
+        }
+        if caller == "panel-files" {
+            let selected = &workspace["filesCommit"];
+            if selected.is_object() {
+                return selected["oid"].as_str() == Some(oid)
+                    && selected["base"].as_str() == base;
+            }
+            // An opened historical tab may have a parent outside the loaded log.
+            // Authorize only its exact published pair, never an arbitrary base.
+            return workspace["tabs"].as_array().is_some_and(|tabs| {
+                tabs.iter().any(|tab| {
+                    tab["id"].is_string()
+                        && tab["id"] == workspace["activeTab"]
+                        && tab["target"]["Commit"]["oid"].as_str() == Some(oid)
+                        && match base {
+                            Some(base) => tab["base"]["Commit"]["oid"].as_str() == Some(base),
+                            None => tab["base"].as_str() == Some("Empty"),
+                        }
+                })
+            });
+        }
+        if workspace["selectedCommit"].as_str() != Some(oid) {
             return false;
         }
         base.is_none_or(|base| {
@@ -266,6 +288,25 @@ mod tests {
         bridge.0.lock().unwrap().state.as_mut().unwrap()["workspace"]["openingRepository"] =
             Value::Bool(true);
         assert!(!bridge.allows_commit_details("panel-git", &scope, "selected", None));
+    }
+    #[test]
+    fn detached_files_reads_only_the_published_file_comparison() {
+        let bridge = PanelBridge::default();
+        let scope: agai_protocol::RepoScope = serde_json::from_value(serde_json::json!({"repo_id":"00000000-0000-4000-8000-000000000001","worktree_id":"00000000-0000-4000-8000-000000000002"})).unwrap();
+        bridge.0.lock().unwrap().state = Some(serde_json::json!({"workspace":{
+            "repo":scope,"openingRepository":false,
+            "filesCommit":{"oid":"selected","base":null},
+            "activeTab":"t","tabs":[{"id":"t","base":{"Commit":{"oid":"old"}},"target":{"Commit":{"oid":"open"}}}]
+        }}));
+        assert!(bridge.allows_commit_details("panel-files", &scope, "selected", None));
+        assert!(!bridge.allows_commit_details("panel-files", &scope, "selected", Some("other")));
+        assert!(!bridge.allows_commit_details("panel-files", &scope, "open", Some("old")));
+        bridge.0.lock().unwrap().state.as_mut().unwrap()["workspace"]["filesCommit"] = Value::Null;
+        assert!(bridge.allows_commit_details("panel-files", &scope, "open", Some("old")));
+        assert!(!bridge.allows_commit_details("panel-files", &scope, "open", None));
+        assert!(!bridge.allows_commit_details("panel-files", &scope, "other", Some("old")));
+        let other = agai_protocol::RepoScope { repo_id: uuid::Uuid::new_v4(), worktree_id: scope.worktree_id };
+        assert!(!bridge.allows_commit_details("panel-files", &other, "open", Some("old")));
     }
     #[test]
     fn remembered_window_requires_visible_valid_bounds() {

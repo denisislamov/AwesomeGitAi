@@ -170,3 +170,65 @@ it("names identical recorded versions explicitly instead of promising a diff", (
     screen.getByText("Saved explanation · identical versions, no + / −"),
   ).toBeTruthy();
 });
+
+it("offers selected commit files before any code tab opens, including root commits", async () => {
+  const { w, desktop } = fixture();
+  w.state.tabs = [];
+  w.state.activeTab = null;
+  desktop.mockResolvedValue({
+    kind: "CommitDetails",
+    oid: "root",
+    base_oid: null,
+    paths: [p("Root.cs")],
+  } as any);
+  w.selectCommit("root");
+  const open = vi.spyOn(w, "openFile").mockResolvedValue();
+  render(<FileNavigator workspace={w} stagingMode="work" />);
+  const option = screen.getByRole("option", {
+    name: "Commit changes",
+  }) as HTMLOptionElement;
+  expect(option.disabled).toBe(false);
+  await screen.findByRole("button", { name: "File Root.cs" });
+  fireEvent.change(screen.getByLabelText("File list scope"), {
+    target: { value: "working" },
+  });
+  fireEvent.change(screen.getByLabelText("File list scope"), {
+    target: { value: "comparison" },
+  });
+  fireEvent.click(await screen.findByRole("button", { name: "File Root.cs" }));
+  expect(open).toHaveBeenCalledWith(p("Root.cs"), "Empty", {
+    Commit: { oid: "root" },
+  });
+});
+
+it("selecting another commit changes the list while retaining open code; activating code restores its pair", async () => {
+  const { w, tab, desktop } = fixture();
+  desktop.mockImplementation(
+    async (request: any) =>
+      ({
+        kind: "CommitDetails",
+        oid: request.oid,
+        base_oid: request.base ?? "parent",
+        paths: [p(request.oid + ".cs")],
+      }) as any,
+  );
+  const ui = render(<FileNavigator workspace={w} stagingMode="work" />);
+  await screen.findByRole("button", { name: "File b.cs" });
+  w.selectCommit("next", "custom");
+  ui.rerender(<FileNavigator workspace={w} stagingMode="work" />);
+  await screen.findByRole("button", { name: "File next.cs" });
+  expect(w.active()).toBe(tab);
+  expect(desktop).toHaveBeenCalledWith(
+    expect.objectContaining({ oid: "next", base: "custom" }),
+  );
+  const open = vi.spyOn(w, "openFile").mockResolvedValue();
+  fireEvent.click(screen.getByRole("button", { name: "File next.cs" }));
+  expect(open).toHaveBeenCalledWith(
+    p("next.cs"),
+    { Commit: { oid: "custom" } },
+    { Commit: { oid: "next" } },
+  );
+  w.activate(tab.id);
+  ui.rerender(<FileNavigator workspace={w} stagingMode="work" />);
+  await screen.findByRole("button", { name: "File b.cs" });
+});

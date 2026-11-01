@@ -339,3 +339,27 @@ it("accepts smaller and larger font sizes from detached panels", async () => {
     expect(settings).toHaveBeenLastCalledWith({ scale });
   }
 });
+
+it("shares a selected comparison with detached panels and rejects unknown bases", async () => {
+  const w = fixture();
+  w.state.commits = [{ oid: "target" }, { oid: "base" }] as any;
+  const payload = {
+    scope: panelSnapshot(w, {}).scope,
+    oid: "target",
+    base: "base",
+  };
+  await dispatchPanelAction(w, {
+    panel: "git",
+    action: "select_commit",
+    payload,
+  });
+  const detached = new DetachedWorkspace({ read: vi.fn(), desktop: vi.fn() });
+  detached.hydrate(panelSnapshot(w, {}));
+  expect(detached.state.filesCommit).toEqual({ oid: "target", base: "base" });
+  await dispatchPanelAction(w, {
+    panel: "git",
+    action: "select_commit",
+    payload: { ...payload, base: "unknown" },
+  });
+  expect(w.state.filesCommit).toEqual({ oid: "target", base: "base" });
+});

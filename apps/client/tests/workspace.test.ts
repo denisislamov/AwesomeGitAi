@@ -466,3 +466,28 @@ it("ignores an older file explanation within the same reused comparison", async 
   await pending;
   expect(w.state.explanationsTruncated).toBe(false);
 });
+
+it("a later commit selection cannot be overwritten by an earlier file-open response", async () => {
+  const f = fixture();
+  const w = new Workspace(f.api);
+  await w.openRepository("/repo");
+  await w.openFile(path);
+  const original = w.active();
+  const desktop = f.api.desktop.bind(f.api);
+  let finish!: (r: DesktopResponse) => void;
+  let request!: Extract<DesktopRequest, { kind: "CompareFile" }>;
+  f.api.desktop = async (r) => {
+    if (r.kind !== "CompareFile") return desktop(r);
+    request = r;
+    return new Promise<DesktopResponse>((resolve) => {
+      finish = resolve;
+    });
+  };
+  const opening = w.openFile(path, "Empty", { Commit: { oid: "a" } });
+  w.selectCommit("b");
+  finish(comparison(request));
+  await opening;
+  expect(w.active()).toBe(original);
+  expect(w.state.filesCommit).toEqual({ oid: "b", base: null });
+  expect(w.state.busy).toBe(false);
+});
