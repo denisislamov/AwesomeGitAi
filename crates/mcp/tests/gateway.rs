@@ -43,8 +43,15 @@ fn token_files_are_private_and_symlinks_are_rejected() {
 #[test]
 fn missing_host_is_reported_without_credentials_or_repo_paths() {
     let profile = tempfile::tempdir().unwrap();
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(profile.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
     let repo = tempfile::tempdir().unwrap();
-    let output = std::process::Command::new(env!("CARGO_BIN_EXE_agai-mcp"))
+    let bin = tempfile::tempdir().unwrap();
+    let isolated = bin.path().join("agai-mcp");
+    std::fs::copy(env!("CARGO_BIN_EXE_agai-mcp"), &isolated).unwrap();
+    let output = std::process::Command::new(&isolated)
         .args([
             "--profile",
             profile.path().to_str().unwrap(),
@@ -57,7 +64,7 @@ fn missing_host_is_reported_without_credentials_or_repo_paths() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8(output.stderr).unwrap().trim(),
-        "agai-mcp: HOST_OFFLINE"
+        "agai-mcp: HOST_START_FAILED"
     );
 }
 

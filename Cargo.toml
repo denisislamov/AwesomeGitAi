@@ -1,4 +1,4 @@
 [workspace]
-members = ["crates/storage", "crates/protocol", "crates/host", "crates/git", "crates/domain", "crates/mcp"]
+members = ["crates/storage", "crates/protocol", "crates/host", "crates/git", "crates/domain", "crates/mcp", "crates/host-launch"]
 exclude = ["spikes/platform-probe/src-tauri", "apps/client/src-tauri"]
 resolver = "3"

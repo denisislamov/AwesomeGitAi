@@ -8,6 +8,7 @@ crate-type = ["rlib"]
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 [dependencies]
+agai-host-launch = { path = "../../../crates/host-launch" }
 tauri = { version = "2", features = [] }
 agai-protocol = { path = "../../../crates/protocol" }
 serde = {version="1",features= ["derive"] }

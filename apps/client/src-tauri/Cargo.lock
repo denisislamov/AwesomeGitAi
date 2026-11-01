@@ -12,6 +12,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 name = "agai-client"
 version = "0.1.0"
 dependencies = [
+ "agai-host-launch",
  "agai-protocol",
  "serde",
  "serde_json",
@@ -19,6 +20,14 @@ dependencies = [
  "tauri-build",
  "tempfile",
  "uuid",
+]
+
+[[package]]
+name = "agai-host-launch"
+version = "0.1.0"
+dependencies = [
+ "fs2",
+ "libc",
 ]
 
 [[package]]
@@ -854,6 +863,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]

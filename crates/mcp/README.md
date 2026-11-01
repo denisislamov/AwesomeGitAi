@@ -1,13 +1,15 @@
 # MCP gateway (macOS / Unix T4)
 
-`agai-mcp` uses the official Rust MCP SDK (`rmcp` 3.8.0). Start the desktop host first, then launch a gateway with an explicit repository and host profile:
+`agai-mcp` uses the official Rust MCP SDK (`rmcp` 3.8.0). Launch a gateway with an explicit repository and private host profile. On macOS it starts the sibling `agai-host` executable automatically when needed; the desktop app may be closed:
 
 ```sh
 agai-mcp --profile /absolute/private/profile --repo /absolute/repository \
   --grant-file /absolute/private/profile/mcp-grant.json
 ```
 
-This is stdio mode; stdout is exclusively MCP JSON-RPC. The gateway opens the repository and requests a repository/worktree scoped agent grant through `profile/host.sock`. The grant is stored as a UID-owned mode-0600 JSON file outside the repository. Existing grants are reused only for the same scope; the host remains responsible for revocation. Delete an obsolete grant file explicitly before creating a replacement. The gateway cannot start the host, access its database, route arbitrary desktop operations, or perform Git mutations. A missing host reports `HOST_OFFLINE`.
+This is stdio mode; stdout is exclusively MCP JSON-RPC. The gateway opens the repository and requests a repository/worktree scoped agent grant through `profile/host.sock`. The grant is stored as a UID-owned mode-0600 JSON file outside the repository. Existing grants are reused only for the same scope; the host remains responsible for revocation. Delete an obsolete grant file explicitly before creating a replacement. The gateway connects to one shared host per profile, without direct database access or arbitrary desktop/Git operations. Startup is serialized using a private lock; the host retains its own exclusive profile lock. No executable is resolved from PATH. The host runs independently of the gateway and GUI, with disconnected standard streams. Closing either client leaves it running. The next connection restarts a missing host using the existing grants and history. This installs no login service and enables no network listener.
+
+After upgrading, reconnect existing MCP clients once to load the new gateway. `HOST_START_FAILED`, `HOST_START_TIMEOUT` and `UNSAFE_PROFILE` distinguish startup failures. A failure after sending a request can still report `HOST_OFFLINE`; that request is never replayed automatically. The host stays resident until process termination, logout or reboot; a subsequent MCP/GUI connection starts it again. Existing healthy hosts are reused; replacing a running host binary requires a deliberate service restart.
 
 ## Opt-in loopback Streamable HTTP
 
@@ -24,7 +26,7 @@ Configure the client endpoint `http://127.0.0.1:8765/mcp` and `Authorization: Be
 
 ## Discovery and contract
 
-Nine implemented tools: `integration_guide`, `context_get`, `session_open`, `snapshot_capture`, `decision_record`, `event_append`, `evidence_record`, `decision_supersede`, `session_close`. Every tool is backed by the host. Start with `integration_guide` and `{ "schema_version": 1 }`; resources (`agai://integration-guide/v1`) and the `integration_guide` prompt duplicate the same host guide. `trace_record` and `diagram_record` are not advertised or callable until T6.
+Eleven implemented tools: `integration_guide`, `context_get`, `session_open`, `snapshot_capture`, `decision_record`, `event_append`, `evidence_record`, `decision_supersede`, `session_close`, `trace_record`, `diagram_record`. Every tool is backed by the host. Start with `integration_guide` and `{ "schema_version": 1 }`; resources (`agai://integration-guide/v1`) and the `integration_guide` prompt duplicate the same host guide.
 
 Tool schemas are embedded from `contracts/mcp/v1/tool-inputs.schema.json`, expanded to self-contained schemas and validated including UUID formats before contacting the host. There are 4-MiB limits for incoming transport messages, tool inputs and tool results, a 16-MiB host frame limit and a 30-second host RPC timeout. The gateway does not retry mutations; use the same idempotency key to resolve an uncertain acknowledgement. Transport cancellation is not a rollback of a host transaction.
 

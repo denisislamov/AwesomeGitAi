@@ -69,4 +69,4 @@ Trace/diagram schemas — минимальный исполняемый вали
 
 ## Подключение в текущем macOS MVP
 
-Кнопка «Подключить MCP» выполняет диагностический read локального host и выдаёт generic `mcpServers` JSON с реальным binary/profile/repo/grant-file и копируемую инструкцию. Специфические настройки IDE различаются. Stdio готов сразу; loopback HTTP включается вручную с отдельным private token-файлом по [инструкции gateway](../../crates/mcp/README.md). Приложение должно оставаться открытым.
+Кнопка «Подключить MCP» выполняет диагностический read локального host и выдаёт generic `mcpServers` JSON с реальным binary/profile/repo/grant-file и копируемую инструкцию. Специфические настройки IDE различаются. Stdio готов сразу; loopback HTTP включается вручную с отдельным private token-файлом по [инструкции gateway](../../crates/mcp/README.md). На macOS MCP сам запускает локальный хост при необходимости; приложение можно закрывать. После обновления переподключите MCP один раз, чтобы загрузить новый gateway.

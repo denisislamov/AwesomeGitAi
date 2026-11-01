@@ -109,6 +109,10 @@ async fn exercise(client: &rmcp::service::RunningService<rmcp::RoleClient, ()>) 
 #[tokio::test]
 async fn actual_sdk_stdio_and_http_have_same_tools_results_and_security() {
     let profile = tempfile::tempdir().unwrap();
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(profile.path(), std::fs::Permissions::from_mode(0o700)).unwrap();
+    }
     let repo = tempfile::tempdir().unwrap();
     let host = fake_host(profile.path()).await;
     let stdio =

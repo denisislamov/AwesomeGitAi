@@ -53,9 +53,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "agai-host-launch"
+version = "0.1.0"
+dependencies = [
+ "fs2",
+ "libc",
+ "tempfile",
+]
+
+[[package]]
 name = "agai-mcp"
 version = "0.1.0"
 dependencies = [
+ "agai-host-launch",
  "axum",
  "jsonschema",
  "libc",

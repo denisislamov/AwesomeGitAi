@@ -25,9 +25,25 @@ fn error(code: &str) -> ErrorData {
 }
 async fn rpc(socket: &Path, request: Value) -> Result<Value, ErrorData> {
     tokio::time::timeout(Duration::from_secs(30), async {
-        let mut stream = tokio::net::UnixStream::connect(socket)
-            .await
+        let profile = socket
+            .parent()
+            .ok_or_else(|| error("UNSAFE_PROFILE"))?
+            .to_owned();
+        let binary = std::env::current_exe()
+            .map_err(|_| error("HOST_START_FAILED"))?
+            .parent()
+            .ok_or_else(|| error("HOST_START_FAILED"))?
+            .join("agai-host");
+        let stream =
+            tokio::task::spawn_blocking(move || agai_host_launch::connect(&profile, &binary))
+                .await
+                .map_err(|_| error("HOST_START_FAILED"))?
+                .map_err(error)?;
+        stream
+            .set_nonblocking(true)
             .map_err(|_| error("HOST_OFFLINE"))?;
+        let mut stream =
+            tokio::net::UnixStream::from_std(stream).map_err(|_| error("HOST_OFFLINE"))?;
         let data = serde_json::to_vec(&request).map_err(|_| error("INVALID_REQUEST"))?;
         if data.len() > HOST_LIMIT {
             return Err(error("PAYLOAD_TOO_LARGE"));
@@ -279,5 +295,40 @@ impl ServerHandler for Gateway {
         }
         let result:GetPromptResult=serde_json::from_value(json!({"messages":[{"role":"user","content":{"type":"text","text":self.guide().await?}}]})).unwrap();
         Ok(result.into())
+    }
+}
+
+#[cfg(test)]
+mod connection_tests {
+    use super::*;
+    #[tokio::test]
+    async fn lost_response_is_not_replayed_after_request_was_sent() {
+        let profile = tempfile::tempdir().unwrap();
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(profile.path(), std::fs::Permissions::from_mode(0o700))
+                .unwrap();
+        }
+        let socket = profile.path().join("host.sock");
+        let listener = tokio::net::UnixListener::bind(&socket).unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let size = stream.read_u32().await.unwrap();
+            let mut bytes = vec![0; size as usize];
+            stream.read_exact(&mut bytes).await.unwrap();
+            assert_eq!(
+                serde_json::from_slice::<Value>(&bytes).unwrap()["mutation"],
+                true
+            );
+            drop(stream); // Execution may have happened; its acknowledgement was lost.
+            assert!(
+                tokio::time::timeout(Duration::from_millis(200), listener.accept())
+                    .await
+                    .is_err()
+            );
+        });
+        let result = rpc(&socket, json!({"mutation":true})).await;
+        assert_eq!(result.unwrap_err().message, "HOST_OFFLINE");
+        server.await.unwrap();
     }
 }

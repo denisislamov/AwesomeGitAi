@@ -3,6 +3,7 @@ name = "agai-mcp"
 version = "0.1.0"
 edition = "2024"
 [dependencies]
+agai-host-launch = { path = "../host-launch" }
 rmcp = {version = "=3.8.0", features = ["server", "client", "transport-io", "transport-child-process", "transport-streamable-http-server", "transport-streamable-http-client-reqwest"]}
 tokio = {version = "1", features = ["full"]}
 axum = "0.8"

@@ -4,12 +4,11 @@ use std::{
     io::{Read, Write},
     os::unix::net::UnixStream,
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
     sync::{
         Mutex,
         atomic::{AtomicBool, Ordering},
     },
-    time::{Duration, Instant},
+    time::Duration,
 };
 fn transport_error(error: std::io::Error) -> AppError {
     AppError::new(match error.kind() {
@@ -20,7 +19,6 @@ fn transport_error(error: std::io::Error) -> AppError {
 pub struct DesktopHost {
     pub profile: PathBuf,
     pub binary: PathBuf,
-    child: Mutex<Option<Child>>,
     closing: AtomicBool,
     roots: Mutex<HashSet<PathBuf>>,
 }
@@ -29,26 +27,25 @@ impl DesktopHost {
         Self {
             profile,
             binary,
-            child: Mutex::new(None),
             closing: AtomicBool::new(false),
             roots: Mutex::new(HashSet::new()),
         }
     }
     pub fn shutdown(&self) {
-        self.closing.store(true, Ordering::SeqCst);
-        if let Ok(mut child) = self.child.lock() {
-            if let Some(mut process) = child.take() {
-                if let Ok(mut stream) = UnixStream::connect(self.profile.join("host.sock")) {
-                    let _ = stream.set_read_timeout(Some(Duration::from_secs(20)));
-                    let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
-                    let request = serde_json::json!({"meta":{"schema_version":1,"request_id":uuid::Uuid::new_v4(),"idempotency_key":null},"desktop":{"kind":"GitShutdown"}});
-                    if let Ok(bytes) = serde_json::to_vec(&request) {
-                        let _ = stream.write_all(&(bytes.len() as u32).to_be_bytes()).and_then(|_|stream.write_all(&bytes));
-                        let mut header=[0;4];let _=stream.read_exact(&mut header);
-                    }
-                }
-                let _ = process.kill();
-                let _ = process.wait();
+        if self.closing.swap(true, Ordering::SeqCst) {
+            return;
+        }
+        // Stop GUI Git jobs, but leave the shared MCP service and history alive.
+        if let Ok(mut stream) = UnixStream::connect(self.profile.join("host.sock")) {
+            let _ = stream.set_read_timeout(Some(Duration::from_secs(20)));
+            let _ = stream.set_write_timeout(Some(Duration::from_secs(2)));
+            let request = serde_json::json!({"meta":{"schema_version":1,"request_id":uuid::Uuid::new_v4(),"idempotency_key":null},"desktop":{"kind":"GitShutdown"}});
+            if let Ok(bytes) = serde_json::to_vec(&request) {
+                let _ = stream
+                    .write_all(&(bytes.len() as u32).to_be_bytes())
+                    .and_then(|_| stream.write_all(&bytes));
+                let mut header = [0; 4];
+                let _ = stream.read_exact(&mut header);
             }
         }
     }
@@ -56,41 +53,7 @@ impl DesktopHost {
         if self.closing.load(Ordering::SeqCst) {
             return Err(AppError::new("HOST_OFFLINE"));
         }
-        let socket = self.profile.join("host.sock");
-        if let Ok(stream) = UnixStream::connect(&socket) {
-            return Ok(stream);
-        }
-        let mut child = self
-            .child
-            .lock()
-            .map_err(|_| AppError::new("HOST_OFFLINE"))?;
-        if self.closing.load(Ordering::SeqCst) {
-            return Err(AppError::new("HOST_OFFLINE"));
-        }
-        if child
-            .as_mut()
-            .is_none_or(|p| p.try_wait().ok().flatten().is_some())
-        {
-            *child = Some(
-                Command::new(&self.binary)
-                    .arg(&self.profile)
-                    .stdin(Stdio::null())
-                    .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .spawn()
-                    .map_err(|_| AppError::new("HOST_START_FAILED"))?,
-            );
-        }
-        let deadline = Instant::now() + Duration::from_secs(5);
-        loop {
-            if let Ok(stream) = UnixStream::connect(&socket) {
-                return Ok(stream);
-            }
-            if Instant::now() >= deadline {
-                return Err(AppError::new("HOST_OFFLINE"));
-            }
-            std::thread::sleep(Duration::from_millis(40));
-        }
+        agai_host_launch::connect(&self.profile, &self.binary).map_err(AppError::new)
     }
     pub fn request<T: serde::Serialize>(&self, envelope: &T) -> Result<serde_json::Value> {
         let payload = serde_json::to_vec(envelope).map_err(|_| AppError::new("INVALID_REQUEST"))?;
@@ -109,17 +72,13 @@ impl DesktopHost {
             .and_then(|_| stream.write_all(&payload))
             .map_err(|_| AppError::new("HOST_OFFLINE"))?;
         let mut header = [0; 4];
-        stream
-            .read_exact(&mut header)
-            .map_err(transport_error)?;
+        stream.read_exact(&mut header).map_err(transport_error)?;
         let len = u32::from_be_bytes(header) as usize;
         if len > 16 * 1024 * 1024 {
             return Err(AppError::new("FRAME_TOO_LARGE"));
         }
         let mut data = vec![0; len];
-        stream
-            .read_exact(&mut data)
-            .map_err(transport_error)?;
+        stream.read_exact(&mut data).map_err(transport_error)?;
         let response: serde_json::Value =
             serde_json::from_slice(&data).map_err(|_| AppError::new("INVALID_RESPONSE"))?;
         if response["Ok"]["kind"] == "Repository" {
@@ -169,24 +128,32 @@ impl Drop for DesktopHost {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::process::{Command, Stdio};
     #[test]
-    fn explicit_shutdown_stops_owned_child_before_process_exit() {
+    fn gui_shutdown_stops_jobs_but_keeps_shared_listener_alive() {
         let d = tempfile::tempdir().unwrap();
-        let host = DesktopHost::new(d.path().join("profile"), d.path().join("binary"));
-        let child = Command::new("/bin/sleep").arg("60").spawn().unwrap();
-        let pid = child.id();
-        *host.child.lock().unwrap() = Some(child);
+        let listener = std::os::unix::net::UnixListener::bind(d.path().join("host.sock")).unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut header = [0; 4];
+            stream.read_exact(&mut header).unwrap();
+            let mut bytes = vec![0; u32::from_be_bytes(header) as usize];
+            stream.read_exact(&mut bytes).unwrap();
+            let request: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(request["desktop"]["kind"], "GitShutdown");
+            let response = br#"{"Ok":{"kind":"GitStopped"}}"#;
+            stream
+                .write_all(&(response.len() as u32).to_be_bytes())
+                .unwrap();
+            stream.write_all(response).unwrap();
+            listener
+        });
+        let host = DesktopHost::new(d.path().to_owned(), d.path().join("unused"));
         host.shutdown();
-        let alive = Command::new("/bin/kill")
-            .args(["-0", &pid.to_string()])
-            .stderr(Stdio::null())
-            .status()
-            .unwrap()
-            .success();
-        assert!(
-            !alive,
-            "Explicit shutdown must terminate the owned host before Tauri exits without Drop"
-        );
+        let _listener = server.join().unwrap();
+        assert!(UnixStream::connect(d.path().join("host.sock")).is_ok());
+        assert_eq!(host.connect().unwrap_err().code, "HOST_OFFLINE");
+        host.shutdown(); // Idempotent; never sends another request or starts a host.
     }
     #[test]
     fn external_paths_reject_traversal_and_escaping_symlinks() {
@@ -241,8 +208,14 @@ mod timeout_tests {
     #[test]
     fn local_timeout_is_not_an_offline_host() {
         for kind in [std::io::ErrorKind::TimedOut, std::io::ErrorKind::WouldBlock] {
-            assert_eq!(transport_error(std::io::Error::from(kind)).code, "HOST_TIMEOUT");
+            assert_eq!(
+                transport_error(std::io::Error::from(kind)).code,
+                "HOST_TIMEOUT"
+            );
         }
-        assert_eq!(transport_error(std::io::Error::from(std::io::ErrorKind::BrokenPipe)).code, "HOST_OFFLINE");
+        assert_eq!(
+            transport_error(std::io::Error::from(std::io::ErrorKind::BrokenPipe)).code,
+            "HOST_OFFLINE"
+        );
     }
 }
