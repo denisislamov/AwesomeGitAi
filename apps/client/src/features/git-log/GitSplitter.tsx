@@ -4,47 +4,69 @@ export function GitSplitter({
   value,
   onChange,
   invert = false,
+  axis = "x",
+  min = 130,
+  max = 700,
+  step = 20,
+  relative = false,
 }: {
   label: string;
   value: number;
   onChange: (n: number) => void;
   invert?: boolean;
+  axis?: "x" | "y";
+  min?: number;
+  max?: number;
+  step?: number;
+  relative?: boolean;
 }) {
-  const start = useRef({ x: 0, value });
-  const change = (v: number) => onChange(Math.max(130, Math.min(700, v)));
+  const start = useRef({ position: 0, value, scale: 1 });
+  const change = (v: number) => onChange(Math.max(min, Math.min(max, v)));
   return (
     <div
-      className="git-splitter"
+      className={`git-splitter ${axis === "y" ? "horizontal" : "vertical"}`}
       role="separator"
       aria-label={label}
-      aria-orientation="vertical"
-      aria-valuemin={130}
-      aria-valuemax={700}
+      aria-orientation={axis === "y" ? "horizontal" : "vertical"}
+      aria-valuemin={min}
+      aria-valuemax={max}
       aria-valuenow={Math.round(value)}
       tabIndex={0}
       onKeyDown={(e) => {
-        if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
+        const back = axis === "y" ? "ArrowUp" : "ArrowLeft";
+        const forward = axis === "y" ? "ArrowDown" : "ArrowRight";
+        if ([back, forward, "Home", "End"].includes(e.key)) {
           e.preventDefault();
           change(
             e.key === "Home"
-              ? 130
+              ? min
               : e.key === "End"
-                ? 700
+                ? max
                 : value +
-                  (e.key === "ArrowRight" ? 20 : -20) * (invert ? -1 : 1),
+                  (e.key === forward ? step : -step) * (invert ? -1 : 1),
           );
         }
       }}
       onPointerDown={(e) => {
         e.preventDefault();
-        start.current = { x: e.clientX, value };
+        const rect = e.currentTarget.parentElement!.getBoundingClientRect();
+        start.current = {
+          position: axis === "y" ? e.clientY : e.clientX,
+          value,
+          scale: relative
+            ? 100 / Math.max(1, axis === "y" ? rect.height : rect.width)
+            : 1,
+        };
         e.currentTarget.setPointerCapture(e.pointerId);
       }}
       onPointerMove={(e) => {
         if (e.currentTarget.hasPointerCapture(e.pointerId))
           change(
             start.current.value +
-              (e.clientX - start.current.x) * (invert ? -1 : 1),
+              ((axis === "y" ? e.clientY : e.clientX) -
+                start.current.position) *
+                start.current.scale *
+                (invert ? -1 : 1),
           );
       }}
       onPointerUp={(e) => {

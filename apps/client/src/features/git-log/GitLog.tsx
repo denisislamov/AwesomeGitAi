@@ -1,3 +1,4 @@
+import { CommitFileTree } from "./CommitFileTree";
 import { BranchTree } from "./BranchTree";
 import { GitSplitter } from "./GitSplitter";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -29,7 +30,55 @@ export function graphRows(commits: Commit[]) {
     };
   });
 }
+const columnNames = ["Graph", "Message", "Author", "Date", "Hash"];
+const defaultColumns = [80, 360, 140, 110, 90];
+const columnMin = [36, 160, 60, 80, 64];
+const columnMax = [500, 1600, 600, 300, 240];
+function loadDimensions() {
+  try {
+    const v = JSON.parse(
+      localStorage.getItem("agai-git-dimensions-v1") ?? "null",
+    );
+    if (
+      v &&
+      Array.isArray(v.columns) &&
+      v.columns.length === 5 &&
+      v.columns.every(
+        (n: number, i: number) =>
+          Number.isFinite(n) && n >= columnMin[i] && n <= columnMax[i],
+      ) &&
+      Number.isFinite(v.filesHeight) &&
+      v.filesHeight >= 15 &&
+      v.filesHeight <= 85
+    )
+      return {
+        columns: v.columns as number[],
+        filesHeight: v.filesHeight as number,
+        branchesHeight: Number.isFinite(v.branchesHeight)
+          ? Math.max(50, Math.min(300, v.branchesHeight))
+          : 90,
+      };
+  } catch {}
+  return { columns: defaultColumns, filesHeight: 60, branchesHeight: 90 };
+}
 export function GitLog({ workspace }: { workspace: Workspace }) {
+  const [dimensions, setDimensions] = useState(loadDimensions);
+  const updateDimensions = (next: typeof dimensions) => {
+    setDimensions(next);
+    try {
+      localStorage.setItem("agai-git-dimensions-v1", JSON.stringify(next));
+    } catch {}
+  };
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  useEffect(() => {
+    if (!bodyRef.current || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) =>
+      setCompact(entry.contentRect.width <= 650),
+    );
+    observer.observe(bodyRef.current);
+    return () => observer.disconnect();
+  }, []);
   const s = workspace.state;
   const list = useRef<HTMLDivElement>(null);
   const [widths, setWidths] = useState(() => {
@@ -127,10 +176,12 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
       </div>
       <div
         className="git-body"
+        ref={bodyRef}
         style={
           {
             "--git-branches": `${widths[0]}px`,
             "--git-details": `${widths[1]}px`,
+            "--git-branches-height": `${dimensions.branchesHeight}px`,
           } as React.CSSProperties
         }
       >
@@ -162,9 +213,16 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
           />
         </nav>
         <GitSplitter
-          label="Branches width"
-          value={widths[0]}
-          onChange={(v) => resize(0, v)}
+          label={compact ? "Branches height" : "Branches width"}
+          axis={compact ? "y" : "x"}
+          min={compact ? 50 : 130}
+          max={compact ? 300 : 700}
+          value={compact ? dimensions.branchesHeight : widths[0]}
+          onChange={(v) =>
+            compact
+              ? updateDimensions({ ...dimensions, branchesHeight: v })
+              : resize(0, v)
+          }
         />
         <div
           ref={list}
@@ -172,81 +230,117 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
           onScroll={(e) => setScroll(e.currentTarget.scrollTop)}
         >
           <div
-            style={{
-              height: shown.length * 38,
-              position: "relative",
-              minHeight: "100%",
-            }}
+            className="commit-table"
+            style={
+              {
+                width: dimensions.columns.reduce((a, b) => a + b, 0) + 8,
+                minWidth: "100%",
+                "--commit-columns": dimensions.columns
+                  .map((n, i) => (i === 1 ? `minmax(${n}px, 1fr)` : `${n}px`))
+                  .join(" "),
+              } as React.CSSProperties
+            }
           >
-            {visible.map((r, i) => (
-              <button
-                key={r.commit.oid}
-                className={
-                  "commit-row " +
-                  (s.selectedCommit === r.commit.oid ? "selected" : "")
-                }
-                aria-label={`Commit ${r.commit.subject}`}
-                aria-pressed={s.selectedCommit === r.commit.oid}
-                style={{ top: (start + i) * 38 }}
-                onClick={() => workspace.selectCommit(r.commit.oid, base)}
-              >
-                <svg
-                  width={Math.max(
-                    60,
-                    Math.max(r.before.length, r.after.length) * 18 + 18,
-                  )}
-                  height="38"
-                  aria-hidden="true"
-                >
-                  {r.before.map((oid, j) =>
-                    oid === r.commit.oid ? (
-                      <path
-                        key={oid}
-                        d={`M ${12 + j * 18} 0 V19`}
-                        stroke={`var(--lane${j % 3})`}
-                        fill="none"
-                      />
-                    ) : r.after.indexOf(oid) >= 0 ? (
-                      <path
-                        key={oid}
-                        d={`M ${12 + j * 18} 0 L ${12 + r.after.indexOf(oid) * 18} 38`}
-                        stroke={`var(--lane${j % 3})`}
-                        fill="none"
-                      />
-                    ) : null,
-                  )}
-                  {r.edges.map((j, k) => (
-                    <path
-                      key={k}
-                      d={`M ${12 + r.lane * 18} 19 L ${12 + j * 18} 38`}
-                      stroke={`var(--lane${r.lane % 3})`}
-                      fill="none"
-                    />
-                  ))}
-                  <circle
-                    cx={12 + r.lane * 18}
-                    cy="19"
-                    r="4"
-                    fill={`var(--lane${r.lane % 3})`}
+            <div className="commit-columns" aria-label="Commit columns">
+              {columnNames.map((name, i) => (
+                <div key={name} className="commit-column">
+                  <span>{name}</span>
+                  <GitSplitter
+                    label={`${name} column width`}
+                    value={dimensions.columns[i]}
+                    min={columnMin[i]}
+                    max={columnMax[i]}
+                    onChange={(v) =>
+                      updateDimensions({
+                        ...dimensions,
+                        columns: dimensions.columns.map((n, j) =>
+                          i === j ? v : n,
+                        ),
+                      })
+                    }
                   />
-                </svg>
-                <span className="commit-subject">
-                  {s.branches
-                    .filter((b) => b.oid === r.commit.oid)
-                    .map((b) => (
-                      <em key={b.name}>{b.name}</em>
-                    ))}
-                  {r.commit.subject}
-                </span>
-                <span className="commit-author" title={r.commit.author}>
-                  {r.commit.author}
-                </span>
-                <time className="commit-date" title={r.commit.date}>
-                  {r.commit.date.slice(0, 10)}
-                </time>
-                <code>{r.commit.oid.slice(0, 8)}</code>
-              </button>
-            ))}
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                height: shown.length * 38,
+                position: "relative",
+                minHeight: "100%",
+              }}
+            >
+              {visible.map((r, i) => (
+                <button
+                  key={r.commit.oid}
+                  className={
+                    "commit-row " +
+                    (s.selectedCommit === r.commit.oid ? "selected" : "")
+                  }
+                  aria-label={`Commit ${r.commit.subject}`}
+                  aria-pressed={s.selectedCommit === r.commit.oid}
+                  style={{ top: (start + i) * 38 }}
+                  onClick={() => workspace.selectCommit(r.commit.oid, base)}
+                >
+                  <span className="commit-graph">
+                    <svg
+                      width={Math.max(
+                        60,
+                        Math.max(r.before.length, r.after.length) * 18 + 18,
+                      )}
+                      height="38"
+                      aria-hidden="true"
+                    >
+                      {r.before.map((oid, j) =>
+                        oid === r.commit.oid ? (
+                          <path
+                            key={oid}
+                            d={`M ${12 + j * 18} 0 V19`}
+                            stroke={`var(--lane${j % 3})`}
+                            fill="none"
+                          />
+                        ) : r.after.indexOf(oid) >= 0 ? (
+                          <path
+                            key={oid}
+                            d={`M ${12 + j * 18} 0 L ${12 + r.after.indexOf(oid) * 18} 38`}
+                            stroke={`var(--lane${j % 3})`}
+                            fill="none"
+                          />
+                        ) : null,
+                      )}
+                      {r.edges.map((j, k) => (
+                        <path
+                          key={k}
+                          d={`M ${12 + r.lane * 18} 19 L ${12 + j * 18} 38`}
+                          stroke={`var(--lane${r.lane % 3})`}
+                          fill="none"
+                        />
+                      ))}
+                      <circle
+                        cx={12 + r.lane * 18}
+                        cy="19"
+                        r="4"
+                        fill={`var(--lane${r.lane % 3})`}
+                      />
+                    </svg>
+                  </span>
+                  <span className="commit-subject" title={r.commit.subject}>
+                    {s.branches
+                      .filter((b) => b.oid === r.commit.oid)
+                      .map((b) => (
+                        <em key={b.name}>{b.name}</em>
+                      ))}
+                    {r.commit.subject}
+                  </span>
+                  <span className="commit-author" title={r.commit.author}>
+                    {r.commit.author}
+                  </span>
+                  <time className="commit-date" title={r.commit.date}>
+                    {r.commit.date.slice(0, 10)}
+                  </time>
+                  <code title={r.commit.oid}>{r.commit.oid.slice(0, 8)}</code>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
         <GitSplitter
@@ -255,9 +349,40 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
           onChange={(v) => resize(1, v)}
           invert
         />
-        <aside className="commit-details" aria-label="Commit details">
+        <aside
+          className={`commit-details ${details ? "has-commit" : ""}`}
+          aria-label="Commit details"
+          style={
+            details
+              ? {
+                  gridTemplateRows: `minmax(0, ${dimensions.filesHeight}fr) 1px minmax(0, ${100 - dimensions.filesHeight}fr)`,
+                }
+              : undefined
+          }
+        >
           {details ? (
             <>
+              <section className="commit-files" aria-label="Changed files">
+                <h4>
+                  Changed files <span>{details.paths.length}</span>
+                </h4>
+                <CommitFileTree paths={details.paths} onOpen={open} />
+                {details.paths.length === 0 && (
+                  <p>No ordinary diff files; this may be a merge commit.</p>
+                )}
+              </section>
+              <GitSplitter
+                label="Changed files height"
+                axis="y"
+                relative
+                value={dimensions.filesHeight}
+                min={15}
+                max={85}
+                step={5}
+                onChange={(v) =>
+                  updateDimensions({ ...dimensions, filesHeight: v })
+                }
+              />
               <section
                 className="commit-description"
                 aria-label="Commit message"
@@ -272,14 +397,13 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                   details.message
                     .slice(details.message.indexOf("\n"))
                     .trim() && (
-                    <details className="commit-body">
-                      <summary>Full message</summary>
+                    <div className="commit-body">
                       <p>
                         {details.message
                           .slice(details.message.indexOf("\n"))
                           .trim()}
                       </p>
-                    </details>
+                    </div>
                   )}
                 <button
                   className="commit-base-action"
@@ -289,48 +413,21 @@ export function GitLog({ workspace }: { workspace: Workspace }) {
                 >
                   Use as comparison base
                 </button>
-              </section>
-              {base && (
-                <p>
-                  Base: {base.slice(0, 8)}{" "}
-                  <button
-                    aria-label="Clear base"
-                    onClick={() => {
-                      if (s.selectedCommit)
-                        workspace.selectCommit(s.selectedCommit);
-                    }}
-                  >
-                    ×
-                  </button>
-                </p>
-              )}
-              <section className="commit-files" aria-label="Changed files">
-                <h4>
-                  Changed files <span>{details.paths.length}</span>
-                </h4>
-                {details.paths.map((p) => (
-                  <button
-                    key={p.raw_base64}
-                    title={p.display}
-                    aria-label={p.display}
-                    className="commit-file"
-                    onClick={() => open(p)}
-                  >
-                    <span>{p.display.split("/").at(-1)}</span>
-                    {p.display.includes("/") && (
-                      <small>
-                        {p.display.split("/").slice(0, -1).slice(-2).join("/")}
-                      </small>
-                    )}
-                  </button>
-                ))}
-                {details.paths.length === 0 && (
-                  <p>No ordinary diff files; this may be a merge commit.</p>
+                {base && (
+                  <p>
+                    Base: {base.slice(0, 8)}{" "}
+                    <button
+                      aria-label="Clear base"
+                      onClick={() => {
+                        if (s.selectedCommit)
+                          workspace.selectCommit(s.selectedCommit);
+                      }}
+                    >
+                      ×
+                    </button>
+                  </p>
                 )}
               </section>
-              <small className="commit-hint">
-                Selecting a commit does not switch branches.
-              </small>
             </>
           ) : (
             <p>

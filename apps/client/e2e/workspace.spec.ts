@@ -1029,3 +1029,70 @@ test("unavailable saved project keeps recovery data and repository chooser usabl
   await page.getByRole("button", { name: "Choose repository" }).click();
   await expect(page.getByLabel("Repository path")).toBeVisible();
 });
+
+test("Git inspector split and column widths drag and survive reload", async ({
+  page,
+  request,
+}) => {
+  test.setTimeout(60000);
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  const info = await (await request.get("/test-info")).json();
+  await page.goto("/e2e/");
+  await page.getByRole("button", { name: "Choose repository" }).click();
+  await page.getByLabel("Repository path").fill(info.repo);
+  await page
+    .getByRole("button", { name: "Open repository", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Commit Initial wallet", exact: true })
+    .click();
+  const details = page.getByLabel("Commit details", { exact: true });
+  const files = details.getByRole("region", { name: "Changed files" });
+  const message = details.getByRole("region", { name: "Commit message" });
+  await expect(message).toContainText("Initial wallet");
+  expect((await files.boundingBox())!.y).toBeLessThan(
+    (await message.boundingBox())!.y,
+  );
+  const height = page.getByRole("separator", { name: "Changed files height" });
+  const before = (await files.boundingBox())!.height;
+  const hb = (await height.boundingBox())!;
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(hb.x + hb.width / 2, hb.y + 25);
+  await page.mouse.up();
+  await expect
+    .poll(async () => (await files.boundingBox())!.height)
+    .toBeGreaterThan(before + 10);
+  const savedHeight = await height.getAttribute("aria-valuenow");
+  for (const name of ["Graph", "Message", "Author", "Date", "Hash"]) {
+    const handle = page.getByRole("separator", {
+      name: `${name} column width`,
+    });
+    await handle.scrollIntoViewIfNeeded();
+    const value = Number(await handle.getAttribute("aria-valuenow"));
+    const box = (await handle.boundingBox())!;
+    // The handle sits at the right edge; drag to the left so the pointer stays inside the viewport.
+    await page.mouse.move(box.x, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x - 15, box.y + box.height / 2);
+    await page.mouse.up();
+    await expect(handle).toHaveAttribute("aria-valuenow", String(value - 15));
+  }
+  await page.reload();
+  await expect(
+    page.getByRole("separator", { name: "Changed files height" }),
+  ).toHaveAttribute("aria-valuenow", savedHeight!);
+  await expect(
+    page.getByRole("separator", { name: "Author column width" }),
+  ).toHaveAttribute("aria-valuenow", "125");
+  await page.setViewportSize({ width: 600, height: 900 });
+  const branches = page.getByRole("separator", { name: "Branches height" });
+  await expect(branches).toBeVisible();
+  await branches.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(branches).toHaveAttribute("aria-valuenow", "110");
+  await page.screenshot({
+    path: "../../.superpowers/git-inspector-narrow.png",
+    fullPage: true,
+  });
+});

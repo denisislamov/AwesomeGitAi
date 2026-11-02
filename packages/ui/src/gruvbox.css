@@ -1802,3 +1802,33 @@ code {
 .session-notice { display: flex; align-items: center; gap: 8px; padding: 4px 8px; color: var(--muted); }
 .session-notice details { min-width: 0; }
 .session-notice li { overflow-wrap: anywhere; }
+
+/* Rider-style Git inspector and individually resizable log columns. */
+.git-log .commit-table { position: relative; }
+.git-log .commit-columns, .git-log .commit-row {
+  display: grid; grid-template-columns: var(--commit-columns); gap: 0; padding: 0;
+}
+.git-log .commit-columns { position: sticky; top: 0; z-index: 6; height: 26px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.commit-column { position: relative; min-width: 0; padding: 3px 6px; color: var(--muted); font-size: .85em; overflow: visible; }
+.commit-column > span { display: block; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.commit-column > .git-splitter { position: absolute; right: 0; top: 0; bottom: 0; width: 1px; }
+.git-log .commit-row > * { min-width: 0; padding: 0 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.git-log .commit-row .commit-graph { padding: 0; height: 38px; }
+.git-log .commit-row svg { max-width: none; }
+.git-log .commit-row .commit-author, .git-log .commit-row .commit-date, .git-log .commit-row code { display: block; width: auto; }
+.git-log .commit-details.has-commit { display: grid; padding: 0; overflow: hidden; }
+.git-log .commit-files, .git-log .commit-description { min-height: 0; min-width: 0; overflow: auto; padding: 6px 8px; border: 0; }
+.git-log .commit-files h4 { position: sticky; top: -6px; background: var(--panel); padding: 5px 0; z-index: 1; }
+.git-log .commit-file { padding: 3px 5px; font-size: .9em; }
+.commit-file-tree summary { cursor: pointer; padding: 3px 0; color: var(--muted); font-size: .85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.commit-tree-children { padding-left: 12px; }
+.git-splitter.horizontal { cursor: row-resize; }
+.git-splitter.horizontal::after { inset: -3px 0; }
+@container (max-width: 650px) {
+  .git-log .git-body { grid-template-rows: minmax(50px, min(var(--git-branches-height, 90px), 45%)) 1px minmax(0, 1fr); }
+  .git-log .branches + .git-splitter { display: block; grid-column: 1 / -1; }
+}
+/* Outer pane handles stay draggable alongside the sticky column header. */
+.git-body > .git-splitter { z-index: 8; }
+/* Keep the final column handle clear of the inspector pane's hit area. */
+.git-log .commit-columns, .git-log .commit-row { padding-right: 8px; }
